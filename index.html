@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Fleet Logbook — Vehicle Maintenance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- Firebase (compat SDK — works with plain <script> tags, no build step) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --navy:#0F2A47; --gold:#C99A3A; --bone:#F6F3EC; --slate:#4A5568;
+    --ok:#3E7A56; --ok-bg:#EAF3EC; --due:#B8792F; --due-bg:#FBF0E1;
+    --bad:#A8412F; --bad-bg:#FBE9E5; --line:#E7E2D6; --muted:#8a8474; --na-bg:#EFECE3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bone);font-family:'Poppins',sans-serif;color:var(--slate);}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:96px;position:relative;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  input,textarea{font-family:inherit;}
+  a{text-decoration:none;}
+  .header{background:var(--navy);padding:32px 20px 24px;border-radius:0 0 24px 24px;}
+  .eyebrow{color:var(--gold);font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin:0 0 4px;}
+  .h1{color:white;font-size:22px;font-weight:700;margin:0;line-height:1.2;}
+  .row{display:flex;align-items:center;justify-content:space-between;}
+  .icon-chip{background:rgba(201,154,58,.15);border-radius:999px;padding:10px;display:flex;}
+  .stat-row{display:flex;gap:8px;margin-top:20px;}
+  .stat-pill{flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:8px 10px;}
+  .stat-pill .n{font-size:18px;font-weight:700;line-height:1;}
+  .stat-pill .l{font-size:10px;color:rgba(255,255,255,.7);margin-top:4px;}
+  .back-btn{display:inline-flex;align-items:center;gap:4px;color:rgba(255,255,255,.8);font-size:14px;margin-bottom:16px;}
+  .list{padding:16px;display:flex;flex-direction:column;gap:12px;}
+  .card{background:white;border-radius:16px;padding:14px;box-shadow:0 1px 3px rgba(15,42,71,.08);}
+  .vcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;transition:transform .1s;}
+  .vcard:active{transform:scale(.98);}
+  .vplate{font-weight:700;font-size:15px;color:var(--navy);}
+  .vsub{font-size:13px;color:var(--slate);margin:2px 0 0;}
+  .vsite{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-top:4px;}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.02em;}
+  .badge.ok{background:var(--ok-bg);color:#2C5A40;}
+  .badge.due{background:var(--due-bg);color:#8A5B21;}
+  .badge.overdue{background:var(--bad-bg);color:#7E2E20;}
+  .empty{text-align:center;padding:48px 16px;color:var(--muted);font-size:14px;}
+  .fab{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--navy);border-radius:999px;padding:14px 20px;display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;box-shadow:0 8px 20px rgba(15,42,71,.25);max-width:448px;width:calc(100% - 32px);justify-content:center;}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px;margin-top:-16px;}
+  .info-card{background:white;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(15,42,71,.08);}
+  .info-label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.03em;}
+  .info-val{font-size:15px;font-weight:700;color:var(--navy);margin-top:4px;}
+  .info-val.small{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .section-head{padding:24px 16px 0;display:flex;align-items:center;justify-content:space-between;}
+  .section-title{font-weight:700;font-size:14px;color:var(--navy);margin:0;}
+  .pill-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;}
+  .pill-btn.navy{background:var(--navy);color:var(--bone);}
+  .pill-btn.gold{background:var(--gold);color:var(--navy);}
+  .part-card{background:white;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(15,42,71,.06);margin-bottom:10px;}
+  .part-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+  .part-icon{border-radius:8px;padding:6px;display:flex;}
+  .part-name{font-size:13px;font-weight:600;color:var(--navy);margin:0;}
+  .part-meta{font-size:11px;color:var(--muted);margin:2px 0 0;}
+  .progress-track{height:6px;border-radius:99px;background:var(--line);width:100%;margin-top:10px;}
+  .progress-fill{height:6px;border-radius:99px;transition:width .4s ease;}
+  .progress-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;}
+  .part-actions{display:flex;gap:8px;margin-top:10px;}
+  .btn-sm{flex:1;font-size:11.5px;font-weight:600;border-radius:8px;padding:7px;text-align:center;}
+  .btn-sm.navy{background:var(--navy);color:white;}
+  .btn-sm.danger{background:var(--bad-bg);padding:7px 10px;flex:none;display:flex;align-items:center;}
+  .cl-card{background:white;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(15,42,71,.06);display:flex;align-items:center;justify-content:space-between;width:100%;text-align:left;margin-bottom:10px;}
+  .timeline{position:relative;padding-left:20px;margin-top:12px;}
+  .timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:1px;background:var(--line);}
+  .tl-item{position:relative;padding-bottom:20px;}
+  .tl-dot{position:absolute;left:-20px;top:2px;width:14px;height:14px;border-radius:50%;border:2px solid var(--navy);background:var(--bone);}
+  .tl-card{background:white;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(15,42,71,.06);}
+  .tl-top{display:flex;align-items:center;justify-content:space-between;}
+  .tl-type{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--navy);}
+  .tl-date{font-size:11px;color:var(--muted);}
+  .tl-notes{font-size:12.5px;color:var(--slate);margin:6px 0 0;line-height:1.4;}
+  .tl-foot{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--muted);}
+  .form-header{background:var(--navy);padding:32px 16px 20px;border-radius:0 0 24px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .form-title{color:white;font-weight:700;font-size:15px;margin:0;text-align:center;}
+  .form-sub{color:rgba(255,255,255,.5);font-size:11px;text-align:center;margin:2px 0 0;}
+  .form-body{padding:20px 16px 0;display:flex;flex-direction:column;gap:16px;}
+  .field label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);}
+  .field .ctrl{margin-top:5px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  input[type=text],input[type=number],input[type=date],textarea,select{width:100%;background:white;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;color:var(--navy);outline:none;}
+  textarea{resize:none;}
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .type-btn{display:flex;align-items:center;gap:6px;border-radius:10px;padding:9px 10px;font-size:12px;font-weight:500;border:1px solid var(--line);background:white;color:var(--slate);text-align:left;}
+  .type-btn.sel{border-color:var(--navy);background:var(--navy);color:white;}
+  .submit-wrap{padding:20px 16px 8px;}
+  .submit-btn{width:100%;border-radius:12px;padding:14px;font-weight:600;font-size:14px;background:var(--gold);color:var(--navy);}
+  .submit-btn:disabled{background:#D8D2C2;color:var(--muted);}
+  .cl-item{background:white;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(15,42,71,.06);margin-bottom:8px;}
+  .cl-item-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .cl-item-name{font-size:12.5px;font-weight:500;color:var(--navy);flex:1;}
+  .cl-results{display:flex;gap:4px;flex-shrink:0;}
+  .cl-result-btn{border-radius:8px;padding:6px;border:1px solid var(--line);background:white;display:flex;}
+  .cl-result-btn.sel-pass{border-color:var(--ok);background:var(--ok-bg);}
+  .cl-result-btn.sel-fail{border-color:var(--bad);background:var(--bad-bg);}
+  .cl-result-btn.sel-na{border-color:var(--muted);background:var(--na-bg);}
+  .cl-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--gold);margin:16px 0 8px;}
+  .cl-footer{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 20px;background:linear-gradient(180deg, rgba(246,243,236,0) 0%, var(--bone) 30%);}
+  .cl-footer-inner{max-width:448px;margin:0 auto;}
+  .cl-count-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:8px;padding:0 4px;}
+  .print-note{text-align:center;font-size:11px;color:var(--muted);padding:8px 24px 0;}
+  .signoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:8px;}
+  .sig-line{height:40px;border-bottom:1px solid var(--muted);}
+  .sig-label{font-size:11px;color:var(--slate);margin:6px 0 0;}
+  .sig-sub{font-size:10px;color:var(--muted);margin:0;}
+  svg{display:block;}
+  @media print{
+    @page{ size:A4; margin:14mm 12mm; }
+    .no-print{ display:none !important; }
+    html,body{ background:white !important; }
+    #app{ max-width:100% !important; padding:0 !important; }
+    .print-page{ box-shadow:none !important; border:1px solid #D9D3C4 !important; border-radius:0 !important; }
+    .print-section{ page-break-inside:avoid; box-shadow:none !important; border:1px solid var(--line) !important; }
+    .print-header{ background:white !important; border-bottom:2px solid var(--navy); border-radius:0 !important; }
+    .print-header *{ color:var(--navy) !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ---------------- data & constants ---------------- */
+const uid = () => Math.random().toString(36).slice(2,10);
+
+const SERVICE_TYPES = {
+  service:{label:"Scheduled service", ic:iconWrench},
+  tyre:{label:"Tyre / brakes", ic:iconDisc},
+  inspection:{label:"Inspection / Puspakom", ic:iconShield},
+  fuel:{label:"Fuel / fluids", ic:iconFuel},
+  repair:{label:"Repair", ic:iconAlert},
+  compliance:{label:"Road tax / insurance", ic:iconClipboard},
+};
+
+const PART_CATEGORIES = {
+  tyre_front:{label:"Tyres — front", ic:iconDot, lifeKm:40000, lifeMonths:36},
+  tyre_rear:{label:"Tyres — rear", ic:iconDot, lifeKm:40000, lifeMonths:36},
+  battery:{label:"Battery", ic:iconBattery, lifeKm:60000, lifeMonths:30},
+  brake_front:{label:"Brake pads — front", ic:iconDisc, lifeKm:30000, lifeMonths:24},
+  brake_rear:{label:"Brake pads — rear", ic:iconDisc, lifeKm:35000, lifeMonths:24},
+  air_filter:{label:"Air filter", ic:iconFilter, lifeKm:20000, lifeMonths:12},
+  wiper:{label:"Wiper blades", ic:iconWrench, lifeKm:15000, lifeMonths:12},
+  other:{label:"Other part", ic:iconWrench, lifeKm:30000, lifeMonths:24},
+};
+const partMeta = k => PART_CATEGORIES[k] || PART_CATEGORIES.other;
+
+const CHECKLIST_TEMPLATE = [
+  {section:"Exterior & body", items:["Body condition / dents","Windscreen & windows","Mirrors","Number plates","Wipers & washer fluid"]},
+  {section:"Tyres & wheels", items:["Tyre tread depth","Tyre pressure","Spare tyre & jack","Wheel nuts secure"]},
+  {section:"Engine bay & fluids", items:["Engine oil level","Coolant level","Brake fluid level","Battery condition","Belts & hoses"]},
+  {section:"Brakes & lights", items:["Headlights","Brake lights & indicators","Hazard lights","Handbrake function","Foot brake response"]},
+  {section:"Interior & safety", items:["Seatbelts","Horn","Fire extinguisher","First aid kit","Warning triangle / cone"]},
+];
+const RESULTS = {
+  pass:{label:"Pass", color:"var(--ok)", ic:iconCheck},
+  fail:{label:"Fail", color:"var(--bad)", ic:iconX},
+  na:{label:"N/A", color:"var(--muted)", ic:iconMinus},
+};
+const COMPANY_NAME = "PFMSB — Fleet Maintenance";
+
+function seedVehicles(){
+  return [
+    { id:uid(), plate:"WXX 4521", make:"Toyota", model:"Hilux", site:"Residensi Tapah",
+      odometer:48210, intervalKm:10000, lastServiceKm:41800, lastServiceDate:"2026-05-14",
+      logs:[
+        {id:uid(), date:"2026-05-14", odometer:41800, type:"service", notes:"Engine oil, oil filter, air filter replaced.", cost:320, workshop:"Kedai Servis Amin"},
+        {id:uid(), date:"2026-02-02", odometer:36120, type:"tyre", notes:"Rotated tyres, checked brake pads.", cost:180, workshop:"Tayar Sentosa"},
+      ],
+      parts:[
+        {id:uid(), category:"tyre_front", installDate:"2025-06-10", installOdometer:24500, lifeKm:40000, lifeMonths:36, cost:620, workshop:"Tayar Sentosa", notes:"Set of 2, Bridgestone"},
+        {id:uid(), category:"tyre_rear", installDate:"2025-06-10", installOdometer:24500, lifeKm:40000, lifeMonths:36, cost:620, workshop:"Tayar Sentosa", notes:"Set of 2, Bridgestone"},
+        {id:uid(), category:"battery", installDate:"2024-11-02", installOdometer:16200, lifeKm:60000, lifeMonths:30, cost:380, workshop:"Kedai Servis Amin", notes:""},
+      ], checklists:[], bookings:[],
+      roadTax:{expiry:"2027-01-15", cost:90, notes:""},
+      insurance:{expiry:"2026-09-01", provider:"Etiqa", policyNo:"ET-88213-24", cost:1450, notes:"Comprehensive"} },
+    { id:uid(), plate:"VBK 9012", make:"Perodua", model:"Myvi", site:"PPR Portfolio (JPN)",
+      odometer:62950, intervalKm:8000, lastServiceKm:55400, lastServiceDate:"2026-04-02",
+      logs:[{id:uid(), date:"2026-04-02", odometer:55400, type:"service", notes:"Full service + coolant top-up.", cost:260, workshop:"Perodua Service Centre"}],
+      parts:[
+        {id:uid(), category:"tyre_front", installDate:"2023-08-15", installOdometer:18000, lifeKm:40000, lifeMonths:36, cost:480, workshop:"Perodua Service Centre", notes:""},
+        {id:uid(), category:"tyre_rear", installDate:"2023-08-15", installOdometer:18000, lifeKm:40000, lifeMonths:36, cost:480, workshop:"Perodua Service Centre", notes:""},
+      ], checklists:[], bookings:[],
+      roadTax:{expiry:"2026-07-20", cost:70, notes:""},
+      insurance:{expiry:"2027-03-10", provider:"Allianz", policyNo:"AZ-55012-25", cost:1180, notes:"Comprehensive"} },
+    { id:uid(), plate:"JQR 7788", make:"Nissan", model:"Navara", site:"Residensi PR1MA Tebrau",
+      odometer:71430, intervalKm:10000, lastServiceKm:60900, lastServiceDate:"2025-12-20",
+      logs:[
+        {id:uid(), date:"2025-12-20", odometer:60900, type:"service", notes:"Major service, gearbox oil changed.", cost:540, workshop:"Nissan Auto Bavaria"},
+        {id:uid(), date:"2025-09-11", odometer:52100, type:"inspection", notes:"Puspakom inspection passed.", cost:90, workshop:"Puspakom Larkin"},
+      ],
+      parts:[
+        {id:uid(), category:"tyre_front", installDate:"2024-01-20", installOdometer:30500, lifeKm:40000, lifeMonths:36, cost:700, workshop:"Nissan Auto Bavaria", notes:"Set of 2"},
+        {id:uid(), category:"tyre_rear", installDate:"2024-01-20", installOdometer:30500, lifeKm:40000, lifeMonths:36, cost:700, workshop:"Nissan Auto Bavaria", notes:"Set of 2"},
+        {id:uid(), category:"battery", installDate:"2023-07-05", installOdometer:18800, lifeKm:60000, lifeMonths:30, cost:420, workshop:"Nissan Auto Bavaria", notes:""},
+        {id:uid(), category:"brake_front", installDate:"2025-12-20", installOdometer:60900, lifeKm:30000, lifeMonths:24, cost:260, workshop:"Nissan Auto Bavaria", notes:""},
+      ], checklists:[], bookings:[],
+      roadTax:{expiry:"2026-12-01", cost:120, notes:""},
+      insurance:{expiry:"2026-08-05", provider:"Etiqa", policyNo:"ET-77440-25", cost:1620, notes:"Comprehensive"} },
+  ];
+}
+
+/* ---------------- calculations ---------------- */
+function monthsBetween(a,b){ return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth()) + (b.getDate()-a.getDate())/30; }
+function statusOf(v){
+  const kmLeft = v.lastServiceKm + v.intervalKm - v.odometer;
+  const pct = Math.max(0, Math.min(1, kmLeft / v.intervalKm));
+  if (kmLeft <= 0) return {level:"overdue", label:"Overdue", kmLeft, pct:0};
+  if (kmLeft <= v.intervalKm*0.15) return {level:"due", label:"Due soon", kmLeft, pct};
+  return {level:"ok", label:"On track", kmLeft, pct};
+}
+function partStatusOf(part, currentOdometer){
+  const kmUsed = currentOdometer - part.installOdometer;
+  const kmPct = part.lifeKm ? kmUsed/part.lifeKm : 0;
+  const monthsUsed = monthsBetween(new Date(part.installDate), new Date());
+  const monthsPct = part.lifeMonths ? monthsUsed/part.lifeMonths : 0;
+  const usedPct = Math.max(kmPct, monthsPct);
+  const remainingKm = Math.round(part.lifeKm - kmUsed);
+  const limitingByTime = monthsPct > kmPct;
+  const pctLeft = Math.max(0, Math.min(1, 1-usedPct));
+  let level = "ok";
+  if (usedPct >= 1) level = "overdue"; else if (usedPct >= 0.85) level = "due";
+  return {level, pctLeft, kmUsed, remainingKm, limitingByTime, monthsUsed:Math.round(monthsUsed)};
+}
+const BOOKING_COLORS = {
+  upcoming:{bg:"#EAF3EC", text:"#2C5A40"},
+  ongoing:{bg:"#FBF0E1", text:"#8A5B21"},
+  completed:{bg:"#EFECE3", text:"#6B6558"},
+};
+function bookingStatusOf(b){
+  const now = new Date(); const start = new Date(b.start), end = new Date(b.end);
+  if (now < start) return {level:"upcoming", label:"Upcoming"};
+  if (now >= start && now <= end) return {level:"ongoing", label:"In use"};
+  return {level:"completed", label:"Completed"};
+}
+function bookingConflict(vehicle, start, end, excludeId){
+  const s = new Date(start), e = new Date(end);
+  return (vehicle.bookings||[]).find(b => {
+    if (b.id===excludeId) return false;
+    return s < new Date(b.end) && e > new Date(b.start);
+  });
+}
+function fmtDateTime(v){
+  return new Date(v).toLocaleString("en-MY", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"});
+}
+function bookingBadge(level,label){
+  const c = BOOKING_COLORS[level];
+  const ic = level==="completed"?iconCheck(12):level==="ongoing"?iconClock(12):iconCal(12);
+  return `<span class="badge" style="background:${c.bg};color:${c.text}">${ic}${label}</span>`;
+}
+function complianceStatus(expiry){
+  if (!expiry) return {level:"due", label:"Not set", daysLeft:null};
+  const days = Math.ceil((new Date(expiry) - new Date())/86400000);
+  if (days < 0) return {level:"overdue", label:"Expired", daysLeft:days};
+  if (days <= 30) return {level:"due", label:"Expiring soon", daysLeft:days};
+  return {level:"ok", label:"Valid", daysLeft:days};
+}
+function fmtDate(d){ return new Date(d).toLocaleDateString("en-MY",{day:"2-digit",month:"short",year:"numeric"}); }
+function fmtOdo(v){ return `<span style="font-family:'JetBrains Mono',monospace">${Math.round(v).toLocaleString("en-MY")} <span style="font-size:10px;opacity:.6;font-family:Poppins,sans-serif">km</span></span>`; }
+function badge(level,label){
+  const ic = level==="ok"?iconCheck(12):level==="due"?iconClock(12):iconAlert(12);
+  return `<span class="badge ${level}">${ic}${label}</span>`;
+}
+
+/* ---------------- tiny inline icon set (stroke, currentColor) ---------------- */
+function svgWrap(size,inner){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`; }
+function iconWrench(s=14){ return svgWrap(s,'<path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2z"/>'); }
+function iconDisc(s=14){ return svgWrap(s,'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>'); }
+function iconShield(s=14){ return svgWrap(s,'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>'); }
+function iconFuel(s=14){ return svgWrap(s,'<path d="M4 21V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15"/><path d="M4 12h8"/><path d="M14 8h2l3 3v6a1.5 1.5 0 0 1-3 0v-2h-2"/>'); }
+function iconAlert(s=14){ return svgWrap(s,'<path d="M12 3 2 20h20z"/><path d="M12 10v4"/><path d="M12 17h.01"/>'); }
+function iconDot(s=14){ return svgWrap(s,'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'); }
+function iconBattery(s=14){ return svgWrap(s,'<rect x="2" y="7" width="17" height="10" rx="1.5"/><path d="M22 10v4"/><path d="M6 11v2"/>'); }
+function iconFilter(s=14){ return svgWrap(s,'<path d="M4 4h16l-6 8v6l-4 2v-8z"/>'); }
+function iconCheck(s=14){ return svgWrap(s,'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'); }
+function iconX(s=14){ return svgWrap(s,'<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>'); }
+function iconMinus(s=14){ return svgWrap(s,'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>'); }
+function iconClock(s=14){ return svgWrap(s,'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>'); }
+function iconPlus(s=18){ return svgWrap(s,'<path d="M12 5v14M5 12h14"/>'); }
+function iconBack(s=16){ return svgWrap(s,'<path d="m15 18-6-6 6-6"/>'); }
+function iconFwd(s=16){ return svgWrap(s,'<path d="m9 18 6-6-6-6"/>'); }
+function iconGauge(s=22){ return svgWrap(s,'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M12 4a9 9 0 0 0-9 9M12 4a9 9 0 0 1 9 9"/><path d="m13.5 13.5 3-5"/>'); }
+function iconMap(s=11){ return svgWrap(s,'<path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'); }
+function iconCal(s=13){ return svgWrap(s,'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'); }
+function iconTrash(s=13){ return svgWrap(s,'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'); }
+function iconClipboard(s=13){ return svgWrap(s,'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 11h6M9 15h4"/>'); }
+function iconPrinter(s=13){ return svgWrap(s,'<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M6 17h12v4H6z"/>'); }
+function iconUser(s=13){ return svgWrap(s,'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'); }
+function iconClose(s=20){ return svgWrap(s,'<path d="m6 6 12 12M18 6 6 18"/>'); }
+
+function gaugeSvg(pct, level, size=64){
+  const colorMap = {ok:"var(--ok)", due:"var(--due)", overdue:"var(--bad)"};
+  const stroke=6, r=(size-stroke)/2, c=2*Math.PI*r, dash=c*pct;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${colorMap[level]}" stroke-width="${stroke}"
+      stroke-dasharray="${dash} ${c-dash}" stroke-linecap="round" transform="rotate(-90 ${size/2} ${size/2})"/>
+  </svg>`;
+}
+
+/* ---------------- Firebase (shared team storage) ---------------- */
+// 1. Paste the config object from Firebase console → Project settings → Your apps.
+// 2. Make sure Anonymous auth and Firestore are enabled (see setup notes).
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+async function saveVehicleDoc(vehicle){
+  try{ await db.collection("vehicles").doc(vehicle.id).set(vehicle); }
+  catch(e){ console.error("Save failed:", e); alert("Couldn't save — check your connection and Firebase setup."); }
+}
+async function deleteVehicleDoc(id){
+  try{ await db.collection("vehicles").doc(id).delete(); }
+  catch(e){ console.error("Delete failed:", e); }
+}
+async function seedIfEmpty(){
+  const snap = await db.collection("vehicles").get();
+  if (snap.empty){
+    const seed = seedVehicles();
+    for (const v of seed) await saveVehicleDoc(v);
+  }
+}
+function subscribeVehicles(onChange){
+  db.collection("vehicles").onSnapshot(
+    snapshot => onChange(snapshot.docs.map(d => d.data())),
+    err => console.error("Firestore listener error:", err)
+  );
+}
+
+/* ---------------- app state ---------------- */
+let S = { vehicles:[], screen:"list", activeId:null, editPartId:null, activeChecklistId:null, confirmDeleteId:null, renewDocType:null, draft:{} };
+
+function activeVehicle(){ return S.vehicles.find(v=>v.id===S.activeId); }
+
+function goto(screen, extra={}){ Object.assign(S, {screen}, extra); render(); window.scrollTo(0,0); }
+
+/* ---------------- mutations ---------------- */
+function addVehicle(data){
+  const v = {id:uid(), logs:[], parts:[], checklists:[], bookings:[], roadTax:{expiry:null, cost:"", notes:""}, insurance:{expiry:null, provider:"", policyNo:"", cost:"", notes:""}, ...data};
+  S.vehicles = [v, ...S.vehicles];
+  saveVehicleDoc(v);
+  goto("list");
+}
+function deleteVehicle(vehicleId){
+  S.vehicles = S.vehicles.filter(v=>v.id!==vehicleId);
+  deleteVehicleDoc(vehicleId);
+  S.activeId = null;
+  S.confirmDeleteId = null;
+  goto("list");
+}
+function addLog(vehicleId, entry){
+  let updated = null;
+  S.vehicles = S.vehicles.map(v=>{
+    if (v.id!==vehicleId) return v;
+    const logs = [{id:uid(), ...entry}, ...v.logs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const odometer = Math.max(v.odometer, entry.odometer);
+    const lastServiceKm = entry.type==="service" ? entry.odometer : v.lastServiceKm;
+    const lastServiceDate = entry.type==="service" ? entry.date : v.lastServiceDate;
+    updated = {...v, logs, odometer, lastServiceKm, lastServiceDate};
+    return updated;
+  });
+  if (updated) saveVehicleDoc(updated);
+  goto("detail");
+}
+function savePart(vehicleId, partData, replacingId){
+  let updated = null;
+  S.vehicles = S.vehicles.map(v=>{
+    if (v.id!==vehicleId) return v;
+    let parts = v.parts||[];
+    if (replacingId) parts = parts.filter(p=>p.id!==replacingId);
+    parts = [{id:uid(), ...partData}, ...parts];
+    const logs = [{id:uid(), date:partData.installDate, odometer:partData.installOdometer, type:"tyre",
+      notes:`${partMeta(partData.category).label} replaced.${partData.notes?" "+partData.notes:""}`, cost:partData.cost, workshop:partData.workshop},
+      ...v.logs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const odometer = Math.max(v.odometer, partData.installOdometer);
+    updated = {...v, parts, logs, odometer};
+    return updated;
+  });
+  if (updated) saveVehicleDoc(updated);
+  S.editPartId = null;
+  goto("detail");
+}
+function deletePart(vehicleId, partId){
+  let updated = null;
+  S.vehicles = S.vehicles.map(v=>{
+    if (v.id!==vehicleId) return v;
+    updated = {...v, parts:(v.parts||[]).filter(p=>p.id!==partId)};
+    return updated;
+  });
+  if (updated) saveVehicleDoc(updated);
+  render();
+}
+function saveBooking(vehicleId, entry){
+  let updated = null;
+  S.vehicles = S.vehicles.map(v=>{
+    if (v.id!==vehicleId) return v;
+    const bookings = [{id:uid(), ...entry}, ...(v.bookings||[])].sort((a,b)=>new Date(a.start)-new Date(b.start));
+    updated = {...v, bookings};
+    return updated;
+  });
+  if (updated) saveVehicleDoc(updated);
+  goto("detail");
+}
+function deleteBooking(vehicleId, bookingId){
+  let updated = null;
+  S.vehicles = S.vehicles.map(v=>{
+    if (v.id!==vehicleId) return v;
+    updated = {...v, bookings:(v.bookings||[]).filter(b=>b.id!==bookingId)};
+    return updated;
+  });
+  if (updated) saveVehicleDoc(updated);
+  render();
+}
+function saveCompliance(vehicleId, docType, data){
+  let updated = null;
+  const docLabel = docType==="roadTax" ? "Road tax" : "Insurance";
+  S.vehicles = S.vehicles.map(v=>{
+    if (v.id!==vehicleId) return v;
+    const logs = [{id:uid(), date:new Date().toISOString().slice(0,10), odometer:v.odometer, type:"compliance",
+      notes:`${docLabel} renewed, valid until ${fmtDate(data.expiry)}.`, cost:data.cost, workshop:data.provider||""}, ...v.logs];
+    updated = {...v, [docType]:data, logs};
+    return updated;
+  });
+  if (updated) saveVehicleDoc(updated);
+  goto("detail");
+}
+function saveChecklist(vehicleId, record){
+  const failCount = record.results.filter(r=>r.result==="fail").length;
+  const checklist = {id:uid(), ...record, failCount};
+  let updated = null;
+  S.vehicles = S.vehicles.map(v=>{
+    if (v.id!==vehicleId) return v;
+    const checklists = [checklist, ...(v.checklists||[])];
+    const logs = failCount>0
+      ? [{id:uid(), date:record.date, odometer:record.odometer, type:"inspection",
+          notes:`Inspection checklist: ${failCount} item${failCount>1?"s":""} flagged — ${record.results.filter(r=>r.result==="fail").map(r=>r.item).join(", ")}.`,
+          cost:null, workshop:record.inspector}, ...v.logs]
+      : v.logs;
+    updated = {...v, checklists, logs, odometer:Math.max(v.odometer, record.odometer)};
+    return updated;
+  });
+  if (updated) saveVehicleDoc(updated);
+  S.activeChecklistId = checklist.id;
+  goto("checklistView");
+}
+
+/* ---------------- render: list screen ---------------- */
+function renderList(){
+  const counts = S.vehicles.reduce((a,v)=>{a[statusOf(v).level]++; return a;}, {ok:0,due:0,overdue:0});
+  const cards = S.vehicles.map(v=>{
+    const s = statusOf(v);
+    const partsOverdue = (v.parts||[]).filter(p=>partStatusOf(p,v.odometer).level==="overdue").length;
+    const partsDue = (v.parts||[]).filter(p=>partStatusOf(p,v.odometer).level==="due").length;
+    let extraBadge = "";
+    if (partsOverdue>0) extraBadge = badge("overdue", `${partsOverdue} part${partsOverdue>1?"s":""} overdue`);
+    else if (partsDue>0) extraBadge = badge("due", `${partsDue} part${partsDue>1?"s":""} due`);
+    const rt = complianceStatus(v.roadTax && v.roadTax.expiry);
+    const ins = complianceStatus(v.insurance && v.insurance.expiry);
+    let complianceBadges = "";
+    if (v.roadTax && v.roadTax.expiry && rt.level==="overdue") complianceBadges += badge("overdue","Road tax expired");
+    else if (v.roadTax && v.roadTax.expiry && rt.level==="due") complianceBadges += badge("due","Road tax expiring");
+    if (v.insurance && v.insurance.expiry && ins.level==="overdue") complianceBadges += badge("overdue","Insurance expired");
+    else if (v.insurance && v.insurance.expiry && ins.level==="due") complianceBadges += badge("due","Insurance expiring");
+    return `<button class="card vcard" onclick="goto('detail',{activeId:'${v.id}'})">
+      ${gaugeSvg(s.pct, s.level)}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="vplate">${v.plate}</span>${badge(s.level,s.label)}${extraBadge}${complianceBadges}
+        </div>
+        <p class="vsub">${v.make} ${v.model}</p>
+        <div class="vsite">${iconMap()}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.site}</span></div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:var(--slate)">
+        ${fmtOdo(v.odometer)}
+        <p style="margin:4px 0 0;color:${s.level==="overdue"?"var(--bad)":"var(--muted)"}">${s.kmLeft>0? Math.round(s.kmLeft).toLocaleString()+" km to next" : Math.abs(Math.round(s.kmLeft)).toLocaleString()+" km overdue"}</p>
+      </div>
+    </button>`;
+  }).join("");
+
+  return `
+    <div class="header">
+      <div class="row">
+        <div><p class="eyebrow">Fleet Logbook</p><h1 class="h1">Vehicle Maintenance</h1></div>
+        <div style="display:flex;gap:8px">
+          <button class="icon-chip no-print" onclick="goto('calendar')">${iconCal(20)}</button>
+          <div class="icon-chip">${iconGauge()}</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-pill"><p class="n" style="color:var(--ok)">${counts.ok}</p><p class="l">On track</p></div>
+        <div class="stat-pill"><p class="n" style="color:var(--gold)">${counts.due}</p><p class="l">Due soon</p></div>
+        <div class="stat-pill"><p class="n" style="color:#D96A56">${counts.overdue}</p><p class="l">Overdue</p></div>
+      </div>
+    </div>
+    <div class="list">
+      ${S.vehicles.length===0 ? `<div class="empty">No vehicles yet. Add your first one to start the logbook.</div>` : cards}
+    </div>
+    <button class="fab no-print" onclick="goto('addVehicle')">${iconPlus()}<span>Add vehicle</span></button>
+  `;
+}
+
+/* ---------------- render: detail screen ---------------- */
+function renderDetail(){
+  const v = activeVehicle();
+  if (!v) return renderList();
+  const s = statusOf(v);
+  const parts = v.parts||[];
+  const checklists = v.checklists||[];
+  const complianceCardHtml = (label, doc, docType) => {
+    const cs = complianceStatus(doc && doc.expiry);
+    const colorText = {ok:"#2C5A40", due:"#8A5B21", overdue:"#7E2E20"}[cs.level];
+    const dayText = cs.daysLeft==null ? "No expiry date on file"
+      : cs.daysLeft<0 ? `Expired ${Math.abs(cs.daysLeft)} day${Math.abs(cs.daysLeft)===1?"":"s"} ago`
+      : `${cs.daysLeft} day${cs.daysLeft===1?"":"s"} left`;
+    const extra = docType==="insurance" && doc && doc.provider ? ` · ${doc.provider}` : "";
+    const dateLine = (doc && doc.expiry)
+      ? `<p style="font-size:13px;font-weight:700;margin:6px 0 0;color:${colorText}">${fmtDate(doc.expiry)}</p><p style="font-size:11px;color:var(--muted);margin:2px 0 0">${dayText}${extra}</p>`
+      : `<p style="font-size:11px;color:var(--muted);margin:6px 0 0">${dayText}</p>`;
+    return `<div class="info-card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:600;color:var(--navy)">${label}</span>${badge(cs.level, cs.label)}
+      </div>
+      ${dateLine}
+      <button class="btn-sm navy" style="width:100%;margin-top:10px" onclick="startRenewDoc('${docType}')">${doc && doc.expiry ? "Renew" : "Set expiry"}</button>
+    </div>`;
+  };
+
+  const partsHtml = parts.length===0
+    ? `<div class="empty" style="padding:24px 0">No parts tracked yet — start with tyres or battery.</div>`
+    : parts.map(p=>{
+      const meta = partMeta(p.category);
+      const ps = partStatusOf(p, v.odometer);
+      const barColor = {ok:"var(--ok)", due:"var(--due)", overdue:"var(--bad)"}[ps.level];
+      const bg = {ok:"var(--ok-bg)", due:"var(--due-bg)", overdue:"var(--bad-bg)"}[ps.level];
+      const label = ps.level==="overdue"?"Replace":ps.level==="due"?"Due soon":"OK";
+      return `<div class="part-card">
+        <div class="part-top">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="part-icon" style="background:${bg};color:${barColor}">${meta.ic(15)}</div>
+            <div><p class="part-name">${meta.label}</p><p class="part-meta">fitted ${fmtDate(p.installDate)} · ${fmtOdo(p.installOdometer)}</p></div>
+          </div>
+          ${badge(ps.level,label)}
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:${Math.round((1-ps.pctLeft)*100)}%;background:${barColor}"></div></div>
+        <div class="progress-labels">
+          <span>${ps.limitingByTime ? `${ps.monthsUsed} of ${p.lifeMonths} months used` : `${Math.max(0,ps.kmUsed).toLocaleString()} of ${p.lifeKm.toLocaleString()} km used`}</span>
+          <span style="color:${ps.remainingKm<0?'var(--bad)':'var(--muted)'}">${ps.remainingKm>=0? ps.remainingKm.toLocaleString()+" km left" : Math.abs(ps.remainingKm).toLocaleString()+" km over"}</span>
+        </div>
+        <div class="part-actions">
+          <button class="btn-sm navy" onclick="goto('addPart',{editPartId:'${p.id}'})">Replace now</button>
+          <button class="btn-sm danger" onclick="deletePart('${v.id}','${p.id}')">${iconTrash()}</button>
+        </div>
+      </div>`;
+    }).join("");
+
+  const checklistsHtml = checklists.length===0
+    ? `<div class="empty" style="padding:24px 0">No checklists yet. Generate a form to record a pre-trip or periodic inspection.</div>`
+    : checklists.map(cl=>{
+      const level = cl.failCount>0 ? "overdue" : "ok";
+      return `<button class="cl-card" onclick="goto('checklistView',{activeChecklistId:'${cl.id}'})">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;font-weight:600;color:var(--navy)">${fmtDate(cl.date)}</span>
+            ${badge(level, cl.failCount>0? `${cl.failCount} issue${cl.failCount>1?"s":""}` : "All clear")}
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin:4px 0 0">${cl.inspector? "Inspected by "+cl.inspector+" · " : ""}${fmtOdo(cl.odometer)}</p>
+        </div>
+        <span style="color:var(--muted)">${iconFwd()}</span>
+      </button>`;
+    }).join("");
+
+  const bookings = v.bookings||[];
+  const bookingsHtml = bookings.length===0
+    ? `<div class="empty" style="padding:24px 0">No bookings yet. Reserve this vehicle for an upcoming trip.</div>`
+    : bookings.map(b=>{
+      const bs = bookingStatusOf(b);
+      return `<div class="part-card">
+        <div class="part-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:600;color:var(--navy)">${b.requester}</span>${bookingBadge(bs.level,bs.label)}
+            </div>
+            <p style="font-size:12px;color:var(--slate);margin:2px 0 0">${b.purpose}</p>
+            <p style="font-size:11px;color:var(--muted);margin:4px 0 0">${fmtDateTime(b.start)} → ${fmtDateTime(b.end)}</p>
+            ${b.notes? `<p style="font-size:11px;color:var(--muted);margin:4px 0 0">${b.notes}</p>`:""}
+          </div>
+          <button class="btn-sm danger" onclick="deleteBooking('${v.id}','${b.id}')" style="flex-shrink:0">${iconTrash()}</button>
+        </div>
+      </div>`;
+    }).join("");
+
+  const logsHtml = v.logs.length===0
+    ? `<div class="empty">No entries yet. Log the first maintenance record.</div>`
+    : `<div class="timeline">` + v.logs.map(log=>{
+      const t = SERVICE_TYPES[log.type] || SERVICE_TYPES.service;
+      const costHtml = (log.cost!=null && log.cost!=="") ? `<span style="font-weight:600;color:var(--navy)">RM ${Number(log.cost).toLocaleString()}</span>` : "";
+      return `<div class="tl-item"><div class="tl-dot"></div>
+        <div class="tl-card">
+          <div class="tl-top"><div class="tl-type" style="color:var(--gold)">${t.ic(14)}<span style="color:var(--navy)">${t.label}</span></div><span class="tl-date">${fmtDate(log.date)}</span></div>
+          ${log.notes? `<p class="tl-notes">${log.notes}</p>`:""}
+          <div class="tl-foot"><span>${fmtOdo(log.odometer)}</span><div style="display:flex;gap:12px">${log.workshop? `<span>${log.workshop}</span>`:""}${costHtml}</div></div>
+        </div></div>`;
+    }).join("") + `</div>`;
+
+  const deleteBtnHtml = S.confirmDeleteId===v.id
+    ? `<div style="display:flex;align-items:center;gap:6px">
+        <button style="font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.12);color:white" onclick="S.confirmDeleteId=null;render()">Cancel</button>
+        <button style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;background:var(--bad);color:white" onclick="deleteVehicle('${v.id}')">${iconTrash(12)} Confirm delete</button>
+      </div>`
+    : `<button style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(168,65,47,.25);color:#F0B8AC" onclick="S.confirmDeleteId='${v.id}';render()">${iconTrash(12)} Delete vehicle</button>`;
+
+  return `
+    <div class="header">
+      <div class="row" style="margin-bottom:16px">
+        <button class="back-btn no-print" style="margin:0" onclick="goto('list')">${iconBack()} Back</button>
+        <div class="no-print">${deleteBtnHtml}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        ${gaugeSvg(s.pct, s.level, 72)}
+        <div><h1 class="h1" style="font-size:20px">${v.plate}</h1><p style="color:rgba(255,255,255,.6);font-size:13px;margin:2px 0 0">${v.make} ${v.model}</p><div style="margin-top:6px">${badge(s.level,s.label)}</div></div>
+      </div>
+    </div>
+    <div class="info-grid">
+      <div class="info-card"><div class="info-label">${iconGauge(12)}Current odometer</div><p class="info-val">${fmtOdo(v.odometer)}</p></div>
+      <div class="info-card"><div class="info-label">${iconMap(12)}Assigned site</div><p class="info-val small">${v.site}</p></div>
+      <div class="info-card"><div class="info-label">${iconCal(12)}Last service</div><p class="info-val small">${fmtDate(v.lastServiceDate)}</p></div>
+      <div class="info-card"><div class="info-label">${iconWrench(12)}${s.level==="overdue"?"Overdue by":"Next service in"}</div><p class="info-val small" style="color:${s.level==='overdue'?'var(--bad)':'var(--navy)'}">${Math.abs(Math.round(s.kmLeft)).toLocaleString()} km</p></div>
+    </div>
+
+    <div class="section-head"><h2 class="section-title">Road tax &amp; insurance</h2></div>
+    <div class="info-grid" style="margin-top:8px">
+      ${complianceCardHtml("Road tax", v.roadTax, "roadTax")}
+      ${complianceCardHtml("Insurance", v.insurance, "insurance")}
+    </div>
+
+    <div class="section-head"><h2 class="section-title">Parts &amp; components</h2>
+      <button class="pill-btn gold" onclick="goto('addPart',{editPartId:null})">${iconPlus(13)} Add part</button></div>
+    <div style="padding:12px 16px 0">${partsHtml}</div>
+
+    <div class="section-head"><h2 class="section-title">Vehicle bookings</h2>
+      <button class="pill-btn navy" onclick="startBookingForm()">${iconCal(13)} Book vehicle</button></div>
+    <div style="padding:12px 16px 0">${bookingsHtml}</div>
+
+    <div class="section-head"><h2 class="section-title">Inspection checklists</h2>
+      <button class="pill-btn navy" onclick="startChecklistForm()">${iconClipboard()} New checklist</button></div>
+    <div style="padding:12px 16px 0">${checklistsHtml}</div>
+
+    <div class="section-head"><h2 class="section-title">Service history</h2>
+      <button class="pill-btn navy" onclick="startAddLog()">${iconPlus(13)} Log entry</button></div>
+    <div style="padding:12px 16px 0">${logsHtml}</div>
+  `;
+}
+
+/* ---------------- render: add vehicle ---------------- */
+function startAddVehicle(){
+  S.draft = {plate:"", make:"", model:"", site:"", odometer:"", intervalKm:"10000", lastServiceKm:"", lastServiceDate:new Date().toISOString().slice(0,10)};
+  goto("addVehicle");
+}
+function renderAddVehicle(){
+  const d = S.draft;
+  const valid = d.plate && d.make && d.odometer && d.lastServiceKm;
+  return `
+    <div class="form-header">
+      <button class="no-print" style="color:rgba(255,255,255,.8)" onclick="goto('list')">${iconClose()}</button>
+      <h1 class="form-title">Add vehicle</h1><div style="width:20px"></div>
+    </div>
+    <div class="form-body">
+      <div class="field"><label>Plate number *</label><div class="ctrl"><input type="text" value="${d.plate}" placeholder="e.g. WXX 4521" oninput="S.draft.plate=this.value" onblur="renderIfInvalid()"/></div></div>
+      <div class="grid2">
+        <div class="field"><label>Make *</label><div class="ctrl"><input type="text" value="${d.make}" placeholder="Toyota" oninput="S.draft.make=this.value"/></div></div>
+        <div class="field"><label>Model</label><div class="ctrl"><input type="text" value="${d.model}" placeholder="Hilux" oninput="S.draft.model=this.value"/></div></div>
+      </div>
+      <div class="field"><label>Assigned site</label><div class="ctrl"><input type="text" value="${d.site}" placeholder="e.g. Residensi Tapah" oninput="S.draft.site=this.value"/></div></div>
+      <div class="grid2">
+        <div class="field"><label>Current odometer (km) *</label><div class="ctrl"><input type="number" value="${d.odometer}" placeholder="48210" oninput="S.draft.odometer=this.value"/></div></div>
+        <div class="field"><label>Service interval (km)</label><div class="ctrl"><input type="number" value="${d.intervalKm}" oninput="S.draft.intervalKm=this.value"/></div></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Odometer at last service *</label><div class="ctrl"><input type="number" value="${d.lastServiceKm}" oninput="S.draft.lastServiceKm=this.value"/></div></div>
+        <div class="field"><label>Last service date</label><div class="ctrl"><input type="date" value="${d.lastServiceDate}" oninput="S.draft.lastServiceDate=this.value"/></div></div>
+      </div>
+    </div>
+    <div class="submit-wrap"><button class="submit-btn" ${valid?"":"disabled"} onclick="submitAddVehicle()">Save vehicle</button></div>
+  `;
+}
+function submitAddVehicle(){
+  const d = S.draft;
+  if (!(d.plate && d.make && d.odometer && d.lastServiceKm)) { render(); return; }
+  addVehicle({
+    plate:d.plate.toUpperCase(), make:d.make, model:d.model, site:d.site,
+    odometer:Number(d.odometer), intervalKm:Number(d.intervalKm)||10000,
+    lastServiceKm:Number(d.lastServiceKm), lastServiceDate:d.lastServiceDate,
+  });
+}
+function renderIfInvalid(){ render(); }
+
+/* ---------------- render: add log ---------------- */
+function startAddLog(){
+  const v = activeVehicle();
+  S.draft = {date:new Date().toISOString().slice(0,10), odometer:v.odometer, type:"service", notes:"", cost:"", workshop:""};
+  goto("addLog");
+}
+function renderAddLog(){
+  const v = activeVehicle(); const d = S.draft;
+  const valid = d.date && d.odometer;
+  const typeBtns = Object.entries(SERVICE_TYPES).map(([k,t])=>
+    `<button class="type-btn ${d.type===k?"sel":""}" onclick="S.draft.type='${k}';render()">${t.ic(13)} ${t.label}</button>`
+  ).join("");
+  return `
+    <div class="form-header">
+      <button class="no-print" style="color:rgba(255,255,255,.8)" onclick="goto('detail')">${iconClose()}</button>
+      <h1 class="form-title">Log entry — ${v.plate}</h1><div style="width:20px"></div>
+    </div>
+    <div class="form-body">
+      <div class="field"><label>Type</label><div class="ctrl type-grid">${typeBtns}</div></div>
+      <div class="grid2">
+        <div class="field"><label>Date *</label><div class="ctrl"><input type="date" value="${d.date}" oninput="S.draft.date=this.value"/></div></div>
+        <div class="field"><label>Odometer (km) *</label><div class="ctrl"><input type="number" value="${d.odometer}" oninput="S.draft.odometer=this.value"/></div></div>
+      </div>
+      <div class="field"><label>Notes</label><div class="ctrl"><textarea rows="3" placeholder="What was done" oninput="S.draft.notes=this.value">${d.notes}</textarea></div></div>
+      <div class="grid2">
+        <div class="field"><label>Workshop</label><div class="ctrl"><input type="text" value="${d.workshop}" placeholder="Kedai Servis Amin" oninput="S.draft.workshop=this.value"/></div></div>
+        <div class="field"><label>Cost (RM)</label><div class="ctrl"><input type="number" value="${d.cost}" placeholder="0" oninput="S.draft.cost=this.value"/></div></div>
+      </div>
+    </div>
+    <div class="submit-wrap"><button class="submit-btn" ${valid?"":"disabled"} onclick="submitAddLog()">Save entry</button></div>
+  `;
+}
+function submitAddLog(){
+  const d = S.draft;
+  if (!(d.date && d.odometer)) return;
+  addLog(S.activeId, {...d, odometer:Number(d.odometer), cost: d.cost===""?null:Number(d.cost)});
+}
+
+/* ---------------- render: add / replace part ---------------- */
+function renderAddPart(){
+  const v = activeVehicle();
+  const replacing = S.editPartId ? (v.parts||[]).find(p=>p.id===S.editPartId) : null;
+  const d = S.draft;
+  const valid = d.installDate && d.installOdometer && d.lifeKm;
+  const catBtns = Object.entries(PART_CATEGORIES).map(([k,c])=>
+    `<button class="type-btn ${d.category===k?"sel":""}" onclick="selectPartCategory('${k}')">${c.ic(13)} ${c.label}</button>`
+  ).join("");
+  return `
+    <div class="form-header">
+      <button class="no-print" style="color:rgba(255,255,255,.8)" onclick="goto('detail')">${iconClose()}</button>
+      <h1 class="form-title">${replacing?"Replace part":"Add part"} — ${v.plate}</h1><div style="width:20px"></div>
+    </div>
+    <div class="form-body">
+      ${replacing ? `<p style="font-size:12px;border-radius:8px;padding:8px 12px;background:var(--due-bg);color:#8A5B21">This logs a new ${partMeta(replacing.category).label.toLowerCase()} and moves the old one to history.</p>` : ""}
+      <div class="field"><label>Part</label><div class="ctrl type-grid">${catBtns}</div></div>
+      <div class="grid2">
+        <div class="field"><label>Date fitted *</label><div class="ctrl"><input type="date" value="${d.installDate}" oninput="S.draft.installDate=this.value"/></div></div>
+        <div class="field"><label>Odometer (km) *</label><div class="ctrl"><input type="number" value="${d.installOdometer}" oninput="S.draft.installOdometer=this.value"/></div></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Expected life (km)</label><div class="ctrl"><input type="number" value="${d.lifeKm}" oninput="S.draft.lifeKm=this.value"/></div></div>
+        <div class="field"><label>Expected life (months)</label><div class="ctrl"><input type="number" value="${d.lifeMonths}" oninput="S.draft.lifeMonths=this.value"/></div></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Workshop</label><div class="ctrl"><input type="text" value="${d.workshop}" placeholder="Tayar Sentosa" oninput="S.draft.workshop=this.value"/></div></div>
+        <div class="field"><label>Cost (RM)</label><div class="ctrl"><input type="number" value="${d.cost}" placeholder="0" oninput="S.draft.cost=this.value"/></div></div>
+      </div>
+      <div class="field"><label>Notes</label><div class="ctrl"><textarea rows="2" placeholder="Brand, spec, reason for replacement" oninput="S.draft.notes=this.value">${d.notes}</textarea></div></div>
+    </div>
+    <div class="submit-wrap"><button class="submit-btn" ${valid?"":"disabled"} onclick="submitAddPart()">${replacing?"Save replacement":"Save part"}</button></div>
+  `;
+}
+function selectPartCategory(key){
+  const m = partMeta(key);
+  S.draft.category = key; S.draft.lifeKm = m.lifeKm; S.draft.lifeMonths = m.lifeMonths;
+  render();
+}
+function submitAddPart(){
+  const d = S.draft;
+  if (!(d.installDate && d.installOdometer && d.lifeKm)) return;
+  savePart(S.activeId, {
+    category:d.category, installDate:d.installDate, installOdometer:Number(d.installOdometer),
+    lifeKm:Number(d.lifeKm), lifeMonths:Number(d.lifeMonths)||24,
+    cost: d.cost===""?null:Number(d.cost), workshop:d.workshop, notes:d.notes,
+  }, S.editPartId);
+}
+
+/* ---------------- render: renew road tax / insurance ---------------- */
+function startRenewDoc(docType){
+  const v = activeVehicle();
+  const existing = v[docType] || {};
+  S.renewDocType = docType;
+  S.draft = {
+    expiry: existing.expiry || "",
+    provider: existing.provider || "",
+    policyNo: existing.policyNo || "",
+    cost: existing.cost != null ? existing.cost : "",
+    notes: existing.notes || "",
+  };
+  goto("renewDoc");
+}
+function renderRenewDoc(){
+  const v = activeVehicle(); const d = S.draft;
+  const isInsurance = S.renewDocType==="insurance";
+  const valid = !!d.expiry;
+  const insuranceFields = isInsurance ? `
+    <div class="grid2">
+      <div class="field"><label>Provider</label><div class="ctrl"><input type="text" value="${d.provider}" placeholder="e.g. Etiqa" oninput="S.draft.provider=this.value"/></div></div>
+      <div class="field"><label>Policy number</label><div class="ctrl"><input type="text" value="${d.policyNo}" placeholder="ET-88213-24" oninput="S.draft.policyNo=this.value"/></div></div>
+    </div>` : "";
+  return `
+    <div class="form-header">
+      <button class="no-print" style="color:rgba(255,255,255,.8)" onclick="goto('detail')">${iconClose()}</button>
+      <h1 class="form-title">${isInsurance?"Insurance":"Road tax"} — ${v.plate}</h1><div style="width:20px"></div>
+    </div>
+    <div class="form-body">
+      <div class="field"><label>New expiry date *</label><div class="ctrl"><input type="date" value="${d.expiry}" oninput="S.draft.expiry=this.value;render()"/></div></div>
+      ${insuranceFields}
+      <div class="grid2">
+        <div class="field"><label>Cost (RM)</label><div class="ctrl"><input type="number" value="${d.cost}" placeholder="0" oninput="S.draft.cost=this.value"/></div></div>
+        <div class="field"><label>Notes</label><div class="ctrl"><input type="text" value="${d.notes}" placeholder="Optional" oninput="S.draft.notes=this.value"/></div></div>
+      </div>
+    </div>
+    <div class="submit-wrap"><button class="submit-btn" ${valid?"":"disabled"} onclick="submitRenewDoc()">Save</button></div>
+  `;
+}
+function submitRenewDoc(){
+  const d = S.draft;
+  if (!d.expiry) return;
+  saveCompliance(S.activeId, S.renewDocType, {
+    expiry: d.expiry,
+    provider: S.renewDocType==="insurance" ? d.provider : undefined,
+    policyNo: S.renewDocType==="insurance" ? d.policyNo : undefined,
+    cost: d.cost===""?null:Number(d.cost),
+    notes: d.notes,
+  });
+}
+
+/* ---------------- render: checklist form ---------------- */
+function startChecklistForm(){
+  const v = activeVehicle();
+  const flat = CHECKLIST_TEMPLATE.flatMap(sec=>sec.items.map(item=>({section:sec.section,item})));
+  S.draft = {
+    date:new Date().toISOString().slice(0,10), odometer:v.odometer, inspector:"",
+    results: flat.map(f=>({...f, result:"na", remark:""})),
+  };
+  goto("checklistForm");
+}
+function renderChecklistForm(){
+  const v = activeVehicle(); const d = S.draft;
+  const answered = d.results.filter(r=>r.result!=="na"||r.remark).length;
+  const failCount = d.results.filter(r=>r.result==="fail").length;
+  const valid = d.date && d.odometer && d.inspector.trim();
+
+  let idx = -1;
+  const sections = CHECKLIST_TEMPLATE.map(sec=>{
+    const rows = sec.items.map(item=>{
+      idx += 1; const i = idx; const row = d.results[i];
+      const resultBtns = Object.entries(RESULTS).map(([key,r])=>
+        `<button class="cl-result-btn ${row.result===key?"sel-"+key:""}" style="color:${row.result===key?r.color:'#C7C1B2'}" onclick="setChecklistResult(${i},'${key}')">${r.ic(15)}</button>`
+      ).join("");
+      const remarkHtml = row.result==="fail"
+        ? `<input type="text" value="${row.remark}" placeholder="What's wrong?" style="margin-top:8px;font-size:12.5px;padding:8px 10px" oninput="S.draft.results[${i}].remark=this.value"/>`
+        : "";
+      return `<div class="cl-item">
+        <div class="cl-item-top"><span class="cl-item-name">${item}</span><div class="cl-results">${resultBtns}</div></div>
+        ${remarkHtml}
+      </div>`;
+    }).join("");
+    return `<div class="cl-section-label">${sec.section}</div>${rows}`;
+  }).join("");
+
+  return `
+    <div class="form-header">
+      <button class="no-print" style="color:rgba(255,255,255,.8)" onclick="goto('detail')">${iconClose()}</button>
+      <div><h1 class="form-title">Inspection checklist</h1><p class="form-sub">${v.plate}</p></div><div style="width:20px"></div>
+    </div>
+    <div class="form-body">
+      <div class="grid2">
+        <div class="field"><label>Date *</label><div class="ctrl"><input type="date" value="${d.date}" oninput="S.draft.date=this.value"/></div></div>
+        <div class="field"><label>Odometer (km) *</label><div class="ctrl"><input type="number" value="${d.odometer}" oninput="S.draft.odometer=this.value"/></div></div>
+      </div>
+      <div class="field"><label>Inspector name *</label><div class="ctrl"><input type="text" value="${d.inspector}" placeholder="Full name" oninput="S.draft.inspector=this.value" onblur="render()"/></div></div>
+      ${sections}
+    </div>
+    <div class="cl-footer no-print">
+      <div class="cl-footer-inner">
+        <div class="cl-count-row"><span>${answered} of ${d.results.length} items checked</span>${failCount>0?`<span style="color:var(--bad);font-weight:600">${failCount} flagged</span>`:""}</div>
+        <button class="submit-btn" ${valid?"":"disabled"} onclick="submitChecklist()">Submit checklist</button>
+      </div>
+    </div>
+  `;
+}
+function setChecklistResult(i, result){
+  S.draft.results[i].result = result;
+  if (result!=="fail") S.draft.results[i].remark = "";
+  render();
+}
+function submitChecklist(){
+  const d = S.draft;
+  if (!(d.date && d.odometer && d.inspector.trim())) return;
+  saveChecklist(S.activeId, {date:d.date, odometer:Number(d.odometer), inspector:d.inspector.trim(), results:d.results});
+}
+
+/* ---------------- render: booking form ---------------- */
+function startBookingForm(){
+  const now = new Date();
+  const start = new Date(now.getTime()+60*60*1000).toISOString().slice(0,16);
+  const end = new Date(now.getTime()+3*60*60*1000).toISOString().slice(0,16);
+  S.draft = {requester:"", purpose:"", start, end, notes:""};
+  goto("bookingForm");
+}
+function renderBookingForm(){
+  const v = activeVehicle(); const d = S.draft;
+  const timeValid = d.start && d.end && new Date(d.end) > new Date(d.start);
+  const conflict = timeValid ? bookingConflict(v, d.start, d.end) : null;
+  const valid = d.requester.trim() && d.purpose.trim() && timeValid && !conflict;
+
+  const timeError = (!timeValid && d.start && d.end)
+    ? `<p style="font-size:12px;border-radius:8px;padding:8px 12px;background:var(--bad-bg);color:#7E2E20">End time must be after the start time.</p>` : "";
+  const conflictError = conflict
+    ? `<p style="font-size:12px;border-radius:8px;padding:8px 12px;background:var(--bad-bg);color:#7E2E20">Clashes with ${conflict.requester}'s booking (${fmtDateTime(conflict.start)} → ${fmtDateTime(conflict.end)}). Pick another time.</p>` : "";
+
+  return `
+    <div class="form-header">
+      <button class="no-print" style="color:rgba(255,255,255,.8)" onclick="goto('detail')">${iconClose()}</button>
+      <h1 class="form-title">Book vehicle — ${v.plate}</h1><div style="width:20px"></div>
+    </div>
+    <div class="form-body">
+      <div class="field"><label>Requester name *</label><div class="ctrl"><input type="text" value="${d.requester}" placeholder="Full name" oninput="S.draft.requester=this.value"/></div></div>
+      <div class="field"><label>Purpose *</label><div class="ctrl"><input type="text" value="${d.purpose}" placeholder="e.g. Site visit — Residensi Tapah" oninput="S.draft.purpose=this.value"/></div></div>
+      <div class="grid2">
+        <div class="field"><label>Start *</label><div class="ctrl"><input type="datetime-local" value="${d.start}" oninput="S.draft.start=this.value;render()"/></div></div>
+        <div class="field"><label>End *</label><div class="ctrl"><input type="datetime-local" value="${d.end}" oninput="S.draft.end=this.value;render()"/></div></div>
+      </div>
+      ${timeError}${conflictError}
+      <div class="field"><label>Notes</label><div class="ctrl"><textarea rows="2" placeholder="Destination, passengers, anything the next driver should know" oninput="S.draft.notes=this.value">${d.notes}</textarea></div></div>
+    </div>
+    <div class="submit-wrap"><button class="submit-btn" ${valid?"":"disabled"} onclick="submitBooking()">Confirm booking</button></div>
+  `;
+}
+function submitBooking(){
+  const d = S.draft; const v = activeVehicle();
+  const timeValid = d.start && d.end && new Date(d.end) > new Date(d.start);
+  if (!(d.requester.trim() && d.purpose.trim() && timeValid)) return;
+  if (bookingConflict(v, d.start, d.end)) return;
+  saveBooking(S.activeId, {requester:d.requester.trim(), purpose:d.purpose.trim(), start:d.start, end:d.end, notes:d.notes});
+}
+
+/* ---------------- render: fleet-wide calendar ---------------- */
+function renderCalendar(){
+  const all = S.vehicles.flatMap(v => (v.bookings||[]).map(b => ({...b, vehicle:v})));
+  const priority = {ongoing:0, upcoming:1, completed:2};
+  const sorted = all.sort((a,b)=>{
+    const sa = bookingStatusOf(a).level, sb = bookingStatusOf(b).level;
+    if (priority[sa]!==priority[sb]) return priority[sa]-priority[sb];
+    return new Date(a.start)-new Date(b.start);
+  });
+  const rows = sorted.map(b=>{
+    const bs = bookingStatusOf(b);
+    return `<button class="card vcard" style="display:block" onclick="goto('detail',{activeId:'${b.vehicle.id}'})">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:700;color:var(--navy)">${b.vehicle.plate}</span>${bookingBadge(bs.level,bs.label)}
+      </div>
+      <p style="font-size:12px;color:var(--slate);margin:4px 0 0">${b.requester} — ${b.purpose}</p>
+      <p style="font-size:11px;color:var(--muted);margin:4px 0 0">${fmtDateTime(b.start)} → ${fmtDateTime(b.end)}</p>
+    </button>`;
+  }).join("");
+
+  return `
+    <div class="header">
+      <button class="back-btn no-print" onclick="goto('list')">${iconBack()} Back</button>
+      <p class="eyebrow">Fleet Logbook</p><h1 class="h1">Vehicle bookings</h1>
+    </div>
+    <div class="list">${sorted.length===0? `<div class="empty">No bookings across the fleet yet.</div>` : rows}</div>
+  `;
+}
+
+/* ---------------- render: checklist view / print ---------------- */
+function renderChecklistView(){
+  const v = activeVehicle();
+  const cl = (v.checklists||[]).find(c=>c.id===S.activeChecklistId);
+  if (!cl) return `<div style="padding:40px 16px;text-align:center;color:var(--muted)">Checklist not found.<div style="margin-top:16px"><button onclick="goto('detail')" style="color:var(--navy);font-weight:600">Back</button></div></div>`;
+
+  const passCount = cl.results.filter(r=>r.result==="pass").length;
+  const naCount = cl.results.filter(r=>r.result==="na").length;
+  const bySection = CHECKLIST_TEMPLATE.map(sec=>({section:sec.section, rows:cl.results.filter(r=>r.section===sec.section)}));
+
+  const sectionsHtml = bySection.map(sec=>{
+    const rows = sec.rows.map(row=>{
+      const r = RESULTS[row.result]||RESULTS.na;
+      return `<div style="padding:12px;border-top:1px solid var(--line)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span style="font-size:12.5px;font-weight:500;color:var(--navy)">${row.item}</span>
+          <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:${r.color}">${r.ic(13)} ${r.label}</span>
+        </div>
+        ${row.remark?`<p style="font-size:11.5px;margin:4px 0 0;color:var(--bad)">${row.remark}</p>`:""}
+      </div>`;
+    }).join("");
+    return `<div class="print-section" style="margin-top:16px">
+      <p class="cl-section-label" style="margin-bottom:8px">${sec.section}</p>
+      <div class="print-page" style="background:white;border-radius:12px;box-shadow:0 1px 3px rgba(15,42,71,.06);overflow:hidden">${rows}</div>
+    </div>`;
+  }).join("");
+
+  return `
+    <header class="no-print" style="background:var(--navy);padding:32px 20px 20px;border-radius:0 0 24px 24px;display:flex;align-items:center;justify-content:space-between">
+      <button class="back-btn" onclick="goto('detail')">${iconBack()} Back</button>
+      <button class="pill-btn gold" onclick="window.print()">${iconPrinter()} Download PDF</button>
+    </header>
+    <p class="print-note no-print">In the print dialog, set destination to <strong>Save as PDF</strong> to download.</p>
+
+    <div style="padding:16px 16px 0">
+      <div class="print-page print-header" style="background:var(--navy);border-radius:16px;padding:16px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div><p style="color:var(--gold);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;margin:0">${COMPANY_NAME}</p>
+            <h1 style="color:white;font-size:17px;font-weight:700;margin:2px 0 0">Vehicle Inspection Checklist</h1></div>
+          <span style="color:var(--gold)">${iconClipboard(22)}</span>
+        </div>
+      </div>
+
+      <div class="print-page print-section" style="background:white;border-radius:16px;padding:16px;margin-top:12px;box-shadow:0 1px 3px rgba(15,42,71,.08)">
+        <h2 style="font-size:15px;font-weight:700;color:var(--navy);margin:0">${v.plate} — ${v.make} ${v.model}</h2>
+        <p style="font-size:11.5px;color:var(--muted);margin:2px 0 0">${v.site}</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;font-size:12px;color:var(--slate)">
+          <div style="display:flex;align-items:center;gap:6px">${iconCal(13)} ${fmtDate(cl.date)}</div>
+          <div style="display:flex;align-items:center;gap:6px">${iconGauge(13)} ${fmtOdo(cl.odometer)}</div>
+          <div style="display:flex;align-items:center;gap:6px;grid-column:1/3">${iconUser(13)} Inspector: ${cl.inspector}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+          ${badge(cl.failCount>0?"overdue":"ok", cl.failCount>0?`${cl.failCount} item${cl.failCount>1?"s":""} flagged`:"All items passed")}
+          <span style="font-size:11px;color:var(--muted)">${passCount} pass · ${cl.failCount} fail · ${naCount} n/a of ${cl.results.length} items</span>
+        </div>
+      </div>
+
+      ${sectionsHtml}
+
+      <div class="print-page print-section" style="background:white;border-radius:16px;padding:16px;margin-top:16px;box-shadow:0 1px 3px rgba(15,42,71,.08)">
+        <p class="cl-section-label" style="margin-bottom:16px">Sign-off</p>
+        <div class="signoff-grid">
+          <div><div class="sig-line"></div><p class="sig-label">Inspector — ${cl.inspector}</p><p class="sig-sub">Signature &amp; date</p></div>
+          <div><div class="sig-line"></div><p class="sig-label">Reviewed by</p><p class="sig-sub">Signature &amp; date</p></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------------- master render ---------------- */
+function render(){
+  const app = document.getElementById("app");
+  switch(S.screen){
+    case "list": app.innerHTML = renderList(); break;
+    case "detail": app.innerHTML = renderDetail(); break;
+    case "addVehicle": app.innerHTML = renderAddVehicle(); break;
+    case "addLog": app.innerHTML = renderAddLog(); break;
+    case "addPart": app.innerHTML = renderAddPart(); break;
+    case "checklistForm": app.innerHTML = renderChecklistForm(); break;
+    case "checklistView": app.innerHTML = renderChecklistView(); break;
+    case "bookingForm": app.innerHTML = renderBookingForm(); break;
+    case "calendar": app.innerHTML = renderCalendar(); break;
+    case "renewDoc": app.innerHTML = renderRenewDoc(); break;
+    default: app.innerHTML = renderList();
+  }
+}
+window.goto = goto;
+window.deletePart = deletePart;
+window.deleteVehicle = deleteVehicle;
+window.startBookingForm = startBookingForm;
+window.submitBooking = submitBooking;
+window.deleteBooking = deleteBooking;
+window.startRenewDoc = startRenewDoc;
+window.submitRenewDoc = submitRenewDoc;
+window.startChecklistForm = startChecklistForm;
+window.startAddLog = startAddLog;
+window.startAddVehicle = startAddVehicle;
+window.setChecklistResult = setChecklistResult;
+window.submitChecklist = submitChecklist;
+window.selectPartCategory = selectPartCategory;
+window.submitAddPart = submitAddPart;
+window.submitAddLog = submitAddLog;
+window.submitAddVehicle = submitAddVehicle;
+window.renderIfInvalid = renderIfInvalid;
+window.S = S;
+
+/* patch the "Add vehicle" fab and initial nav to use draft-initializing starters */
+const origGoto = goto;
+window.goto = function(screen, extra={}){
+  if (screen==="addVehicle" && !extra.__fromStarter) { startAddVehicle(); return; }
+  origGoto(screen, extra);
+};
+
+/* ---------------- boot ---------------- */
+(async function boot(){
+  const app = document.getElementById("app");
+  if (firebaseConfig.apiKey === "YOUR_API_KEY"){
+    app.innerHTML = `<div style="padding:32px 24px;text-align:center;max-width:400px;margin:0 auto">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--due-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">${iconAlert(22)}</div>
+      <h1 style="font-size:16px;font-weight:700;color:var(--navy);margin:0 0 8px">Firebase setup needed</h1>
+      <p style="font-size:13px;color:var(--slate);line-height:1.5;margin:0 0 4px">This app needs its own Firebase project to store and sync your team's data.</p>
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:12px">Open this file in a text editor, find the <code style="background:var(--na-bg);padding:1px 5px;border-radius:4px">firebaseConfig</code> object near the top of the script, and paste in your project's values from the Firebase console (Project settings → Your apps).</p>
+    </div>`;
+    return;
+  }
+  app.innerHTML = `<div style="padding:40px;text-align:center;color:var(--slate)">Connecting…</div>`;
+  try{
+    await auth.signInAnonymously();
+    await seedIfEmpty();
+    subscribeVehicles(vehicles => {
+      S.vehicles = vehicles;
+      render();
+    });
+  }catch(e){
+    console.error("Startup failed:", e);
+    app.innerHTML = `<div style="padding:40px;text-align:center;color:var(--bad)">
+      Couldn't connect to the shared database.<br/><br/>
+      <span style="color:var(--muted);font-size:13px">Check that the Firebase config, Firestore, and Anonymous auth are set up correctly.</span>
+    </div>`;
+  }
+})();
+</script>
+</body>
+</html>
