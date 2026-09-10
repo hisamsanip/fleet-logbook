@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PFMSB — Operations Division Staff Analytics</title>
+<style>
+  :root{
+    --teal-100:#B2F5EA;
+    --teal-300:#4FD1C5;
+    --teal-500:#319795;
+    --teal-700:#285E61;
+    --gray-100:#EDF2F7;
+    --gray-200:#E2E8F0;
+    --gray-300:#CBD5E0;
+    --gray-400:#A0AEC0;
+    --gray-500:#718096;
+    --gray-700:#2D3748;
+    --gray-800:#1A202C;
+    --green-400:#68D391;
+    --red-400:#FC8181;
+    --page-bg:#F7FAFC;
+    --dark-card:linear-gradient(81.62deg, #313860 2.25%, #151928 79.87%);
+    --font:'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --sidebar-w:260px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font);
+    background:var(--page-bg);
+    color:var(--gray-700);
+  }
+  a{text-decoration:none;color:inherit;}
+
+  /* ---------- Sidebar (matches Sidebar/index.js: white, floating, 16px radius, 16px margin) ---------- */
+  .sidebar{
+    position:fixed; top:16px; left:16px; bottom:16px; width:var(--sidebar-w);
+    background:#fff;
+    border-radius:16px;
+    padding:0 20px;
+    display:flex; flex-direction:column;
+    z-index:10;
+    box-shadow:0px 3.5px 5.5px rgba(0,0,0,.02);
+    overflow-y:auto;
+  }
+  .brand-mark{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:25px 0 20px;
+  }
+  .brand-mark .logo{
+    width:28px;height:28px;border-radius:8px;
+    background:var(--teal-300);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;color:#fff;flex-shrink:0;
+  }
+  .brand-mark .name{color:var(--gray-700);font-weight:700;font-size:13px;letter-spacing:.02em;}
+  .sep{height:1px;background:var(--gray-200);margin:0 0 20px;}
+
+  nav.navlist{display:flex;flex-direction:column;gap:0;margin-bottom:24px;}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 14px;border-radius:15px;
+    color:var(--gray-400);
+    font-size:14px;font-weight:600;
+    margin-bottom:8px;
+  }
+  .nav-item .icon-wrap{
+    width:30px;height:30px;border-radius:12px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:#fff;border:1.5px solid var(--teal-300);
+  }
+  .nav-item .icon-wrap svg{width:15px;height:15px;color:var(--teal-300);}
+  .nav-item.active{color:var(--gray-700);}
+  .nav-item.active .icon-wrap{background:var(--teal-300);border-color:var(--teal-300);}
+  .nav-item.active .icon-wrap svg{color:#fff;}
+  .nav-divider{color:var(--gray-700);font-weight:700;font-size:12px;padding:12px 14px 8px;}
+
+  .sidebar-footer{
+    margin-top:auto;padding:16px 4px 20px;
+    color:var(--gray-400);font-size:10.5px;line-height:1.6;text-align:center;
+  }
+
+  /* ---------- Content ---------- */
+  .content{margin-left:calc(var(--sidebar-w) + 40px);padding:32px 32px 56px;max-width:1300px;}
+
+  .page-head{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    margin-bottom:24px;flex-wrap:wrap;gap:14px;
+  }
+  .eyebrow{font-size:12px;font-weight:600;color:var(--teal-500);margin:0 0 4px;}
+  h1{margin:0;font-size:26px;font-weight:700;color:var(--gray-700);}
+  .page-desc{color:var(--gray-400);font-size:13.5px;margin-top:6px;max-width:620px;}
+  .asof{text-align:right;color:var(--gray-400);font-size:12.5px;line-height:1.7;}
+  .asof b{color:var(--gray-700);}
+
+  /* ---------- Stat cards (matches MiniStatistics.js) ---------- */
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-bottom:24px;}
+  .card{
+    background:#fff;border-radius:15px;padding:22px;
+    box-shadow:0px 3.5px 5.5px rgba(0,0,0,.06);
+  }
+  .stat-card{
+    display:flex;align-items:center;justify-content:space-between;
+    min-height:83px;
+  }
+  .stat-label{font-size:13px;color:var(--gray-400);font-weight:700;margin-bottom:4px;}
+  .stat-value{font-size:20px;color:var(--gray-700);font-weight:700;}
+  .stat-value .unit{font-size:12.5px;font-weight:500;color:var(--gray-400);margin-left:5px;}
+  .stat-note{font-size:13px;color:var(--gray-400);font-weight:500;margin-top:2px;}
+  .stat-note .up{color:var(--green-400);font-weight:700;}
+  .stat-note .dn{color:var(--red-400);font-weight:700;}
+  .icon-box{
+    width:45px;height:45px;border-radius:12px;flex-shrink:0;
+    background:var(--teal-300);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .icon-box svg{width:22px;height:22px;color:#fff;}
+
+  /* ---------- Panels ---------- */
+  .panel-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:24px;margin-bottom:24px;}
+  .panel h2{margin:0 0 4px;font-size:16px;font-weight:700;color:var(--gray-700);}
+  .panel .panel-desc{color:var(--gray-400);font-size:12.5px;font-weight:500;margin-bottom:14px;}
+  .panel.dark{background:var(--dark-card);}
+  .panel.dark h2, .panel.dark .stat-value{color:#fff;}
+  .panel.dark .panel-desc{color:rgba(255,255,255,.55);}
+  .chart-box{position:relative;height:300px;}
+  .chart-box svg{width:100%;height:100%;overflow:visible;}
+  .bar-label{fill:var(--gray-400);font-size:11px;font-family:var(--font);}
+  .bar-label.on-dark{fill:rgba(255,255,255,.55);}
+  .val-label{fill:var(--gray-700);font-size:11px;font-family:var(--font);font-weight:700;}
+  .val-label.on-dark{fill:#fff;}
+  .gridline{stroke:var(--gray-100);stroke-width:1;}
+  .gridline.on-dark{stroke:rgba(255,255,255,.08);}
+  .legend-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-400);font-weight:600;}
+  .legend-item.on-dark{color:rgba(255,255,255,.65);}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block;}
+
+  /* ---------- Table ---------- */
+  table{width:100%;border-collapse:collapse;}
+  thead th{
+    text-align:center;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--gray-400);padding:10px 12px;border-bottom:2px solid var(--gray-200);white-space:nowrap;
+  }
+  thead th.label-col{text-align:left;}
+  tbody td{text-align:center;padding:12px;font-size:13.5px;color:var(--gray-700);border-bottom:1px solid var(--gray-200);}
+  tbody td.label-col{text-align:left;font-weight:700;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr.total-row td{
+    background:rgba(79,209,197,.08);
+    font-weight:800;color:var(--teal-700);
+    border-top:2px solid var(--teal-300);
+  }
+  .dash{color:var(--gray-300);}
+  td.total-col{color:var(--teal-500);font-weight:800;}
+
+  /* ---------- Group cards ---------- */
+  .group-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+  .group-card{background:#fff;border-radius:15px;padding:18px 20px;box-shadow:0px 3.5px 5.5px rgba(0,0,0,.05);}
+  .gc-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .gc-title{font-size:14px;font-weight:700;color:var(--gray-700);}
+  .gc-badge{font-size:12px;font-weight:700;color:#fff;background:var(--teal-300);padding:3px 11px;border-radius:20px;}
+  .cat-line{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:6px 0;color:var(--gray-400);border-bottom:1px solid var(--gray-200);}
+  .cat-line:last-child{border-bottom:none;}
+  .cat-line .cat-name{color:var(--gray-700);font-weight:600;}
+  .loc-split b{color:var(--gray-700);}
+  .loc-split i{color:var(--teal-500);font-style:normal;}
+
+  footer.page-footer{margin-top:26px;color:var(--gray-400);font-size:11.5px;text-align:center;}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand-mark">
+    <div class="logo">P</div>
+    <div class="name">PFMSB DASHBOARD</div>
+  </div>
+  <div class="sep"></div>
+  <nav class="navlist">
+    <a class="nav-item" href="#"><span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>Dashboard</a>
+    <a class="nav-item" href="#"><span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18M7 15h3M3 6h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg></span>Strata Payments</a>
+    <a class="nav-item" href="#"><span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>Utility Monitoring</a>
+    <a class="nav-item" href="#"><span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 16l4-6 3 3 5-8"/></svg></span>KPI Scorecard</a>
+    <a class="nav-item" href="#"><span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span>Defect Tracker</a>
+    <div class="nav-divider">PEOPLE</div>
+    <a class="nav-item active" href="#"><span class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Staff Analytics</a>
+  </nav>
+  <div class="sidebar-footer">Purity UI Dashboard Standard<br>PFMSB Operations Tooling</div>
+</aside>
+
+<main class="content">
+
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">STAFF ANALYTICS · OPERATIONS DIVISION</p>
+      <h1>Operations Division Staff Dashboard</h1>
+      <p class="page-desc">Headcount by Department / Function, Position Category, and Location across the Operations Division.</p>
+    </div>
+    <div class="asof">
+      As of <b>August 2026</b><br>
+      Source: Staff Name List — Aug 2026
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="card stat-card">
+      <div>
+        <div class="stat-label">OPERATIONS HEADCOUNT</div>
+        <div class="stat-value">54<span class="unit">of 80 PFMSB staff</span></div>
+        <div class="stat-note">67.5% of total workforce</div>
+      </div>
+      <div class="icon-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+    </div>
+    <div class="card stat-card">
+      <div>
+        <div class="stat-label">HQ VS. SITE</div>
+        <div class="stat-value">24<span class="unit">/ 30</span></div>
+        <div class="stat-note"><span class="up">44%</span> HQ · 56% Site</div>
+      </div>
+      <div class="icon-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1m-6 4h1m4 0h1m-6 4h1m4 0h1"/></svg>
+      </div>
+    </div>
+    <div class="card stat-card">
+      <div>
+        <div class="stat-label">FUNCTIONAL GROUPS</div>
+        <div class="stat-value">7</div>
+        <div class="stat-note">4 regions + 3 HQ units</div>
+      </div>
+      <div class="icon-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+    </div>
+    <div class="card stat-card">
+      <div>
+        <div class="stat-label">LARGEST GROUP</div>
+        <div class="stat-value" style="font-size:18px;">Northern</div>
+        <div class="stat-note">14 staff — 4 HQ / 10 Site</div>
+      </div>
+      <div class="icon-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 2.6 6.6L21 9l-5 4.5L17.4 21 12 17.3 6.6 21 8 13.5 3 9l6.4-.4L12 2z"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-grid">
+    <div class="card panel dark">
+      <h2>Headcount by Function</h2>
+      <p class="panel-desc">Stacked by position category, ordered by total headcount</p>
+      <div class="chart-box" id="stackChart"></div>
+      <div class="legend-row on-dark" id="stackLegend"></div>
+    </div>
+    <div class="card panel">
+      <h2>HQ vs Site by Function</h2>
+      <p class="panel-desc">Location split within each function</p>
+      <div class="chart-box" id="locChart"></div>
+      <div class="legend-row">
+        <div class="legend-item"><span class="dot" style="background:#2D3748;"></span>HQ</div>
+        <div class="legend-item"><span class="dot" style="background:var(--teal-300);"></span>Site</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card panel" style="margin-bottom:24px;">
+    <h2>Detail table — Function × Position Category × Location</h2>
+    <p class="panel-desc">All Operations Division staff (Department: Property &amp; Facilities Management, plus HQ Division Leadership / Key Handover / Security functions)</p>
+    <table id="detailTable">
+      <thead>
+        <tr>
+          <th class="label-col">Function</th>
+          <th>AGM</th>
+          <th>Manager</th>
+          <th>Sr. Executive</th>
+          <th>Executive</th>
+          <th>Exec. Assistant</th>
+          <th>Total</th>
+          <th>HQ</th>
+          <th>Site</th>
+        </tr>
+      </thead>
+      <tbody id="detailBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card panel">
+    <h2>Group cards — full breakdown</h2>
+    <p class="panel-desc">Position category counts with HQ / Site split per function</p>
+    <div class="group-grid" id="cardGrid"></div>
+  </div>
+
+  <footer class="page-footer">PFMSB internal staff analytics · Prepared from Staff Name List — Aug 2026 · Operations Division only · Styled to match Purity UI Dashboard (Creative Tim × Simmmple)</footer>
+</main>
+
+<script>
+const data = [
+  {"group":"Division Leadership","total":2,"hq":2,"site":0,"categories":{"Assistant General Manager":{"total":2,"hq":2,"site":0}}},
+  {"group":"Northern","total":14,"hq":4,"site":10,"categories":{"Manager":{"total":1,"hq":1,"site":0},"Senior Executive":{"total":1,"hq":0,"site":1},"Executive":{"total":1,"hq":1,"site":0},"Executive Assistant":{"total":11,"hq":2,"site":9}}},
+  {"group":"East Coast & Borneo","total":13,"hq":4,"site":9,"categories":{"Manager":{"total":1,"hq":1,"site":0},"Senior Executive":{"total":1,"hq":1,"site":0},"Executive":{"total":7,"hq":1,"site":6},"Executive Assistant":{"total":4,"hq":1,"site":3}}},
+  {"group":"Central","total":10,"hq":4,"site":6,"categories":{"Manager":{"total":1,"hq":1,"site":0},"Senior Executive":{"total":1,"hq":1,"site":0},"Executive":{"total":6,"hq":1,"site":5},"Executive Assistant":{"total":2,"hq":1,"site":1}}},
+  {"group":"Southern","total":9,"hq":4,"site":5,"categories":{"Manager":{"total":1,"hq":1,"site":0},"Executive":{"total":4,"hq":1,"site":3},"Executive Assistant":{"total":4,"hq":2,"site":2}}},
+  {"group":"Key Handover","total":3,"hq":3,"site":0,"categories":{"Manager":{"total":1,"hq":1,"site":0},"Senior Executive":{"total":1,"hq":1,"site":0},"Executive":{"total":1,"hq":1,"site":0}}},
+  {"group":"Security, Surveillance & Safety","total":3,"hq":3,"site":0,"categories":{"Manager":{"total":1,"hq":1,"site":0},"Senior Executive":{"total":1,"hq":1,"site":0},"Executive":{"total":1,"hq":1,"site":0}}}
+];
+
+const catOrder = ["Assistant General Manager","Manager","Senior Executive","Executive","Executive Assistant"];
+const catLabel = {"Assistant General Manager":"AGM","Manager":"Manager","Senior Executive":"Sr. Executive","Executive":"Executive","Executive Assistant":"Exec. Assistant"};
+// Palette pulled from the actual Purity UI Dashboard source (teal.300 family + white/gray, for legibility on the dark card)
+const catColors = {
+  "Assistant General Manager":"#FFFFFF",
+  "Manager":"#CBD5E0",
+  "Senior Executive":"#B2F5EA",
+  "Executive":"#319795",
+  "Executive Assistant":"#4FD1C5"
+};
+
+const sorted = [...data].sort((a,b)=>b.total-a.total);
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(tag, attrs){
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function renderStackChart(){
+  const box = document.getElementById('stackChart');
+  const W = box.clientWidth || 560, H = box.clientHeight || 300;
+  const padL = 30, padR = 10, padT = 14, padB = 34;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(...sorted.map(d=>d.total));
+  const niceMax = Math.ceil(maxVal/2)*2 + 2;
+  const svg = el('svg', {viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none'});
+
+  const steps = 4;
+  for (let i=0;i<=steps;i++){
+    const v = Math.round(niceMax/steps*i);
+    const y = padT + plotH - (v/niceMax)*plotH;
+    svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,class:'gridline on-dark'}));
+    const t = el('text',{x:padL-6,y:y+3,'text-anchor':'end',class:'bar-label on-dark'});
+    t.textContent = v; svg.appendChild(t);
+  }
+
+  const n = sorted.length;
+  const slot = plotW/n;
+  const barW = Math.min(30, slot*0.42);
+
+  sorted.forEach((d,i)=>{
+    const cx = padL + slot*i + slot/2;
+    let yCursor = padT + plotH;
+    catOrder.forEach(cat=>{
+      const v = d.categories[cat] ? d.categories[cat].total : 0;
+      if (!v) return;
+      const segH = (v/niceMax)*plotH;
+      const y = yCursor - segH;
+      svg.appendChild(el('rect',{
+        x:cx-barW/2, y:y, width:barW, height:segH,
+        fill:catColors[cat], rx:4
+      }));
+      yCursor -= segH;
+    });
+    const totalY = padT + plotH - (d.total/niceMax)*plotH;
+    const lbl = el('text',{x:cx,y:totalY-6,'text-anchor':'middle',class:'val-label on-dark'});
+    lbl.textContent = d.total;
+    svg.appendChild(lbl);
+    const xt = el('text',{x:cx,y:H-padB+16,'text-anchor':'middle',class:'bar-label on-dark'});
+    xt.textContent = d.group.length > 11 ? d.group.slice(0,10)+'…' : d.group;
+    svg.appendChild(xt);
+  });
+
+  svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:padT+plotH,y2:padT+plotH,class:'gridline on-dark'}));
+  box.innerHTML=''; box.appendChild(svg);
+
+  const legend = document.getElementById('stackLegend');
+  legend.innerHTML='';
+  catOrder.forEach(cat=>{
+    const item = document.createElement('div');
+    item.className='legend-item on-dark';
+    item.innerHTML = `<span class="dot" style="background:${catColors[cat]};"></span>${catLabel[cat]}`;
+    legend.appendChild(item);
+  });
+}
+
+function renderLocChart(){
+  const box = document.getElementById('locChart');
+  const W = box.clientWidth || 460, H = box.clientHeight || 300;
+  const padL = 118, padR = 34, padT = 8, padB = 18;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(...sorted.map(d=>d.total));
+  const niceMax = Math.ceil(maxVal/2)*2 + 2;
+  const svg = el('svg', {viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none'});
+
+  const n = sorted.length;
+  const slot = plotH/n;
+  const barH = Math.min(22, slot*0.55);
+
+  sorted.forEach((d,i)=>{
+    const cy = padT + slot*i + slot/2;
+    const lbl = el('text',{x:padL-10,y:cy+4,'text-anchor':'end',class:'bar-label'});
+    lbl.textContent = d.group.length > 20 ? d.group.slice(0,19)+'…' : d.group;
+    svg.appendChild(lbl);
+
+    let xCursor = padL;
+    const hqW = (d.hq/niceMax)*plotW;
+    const siteW = (d.site/niceMax)*plotW;
+    if (d.hq){
+      svg.appendChild(el('rect',{x:xCursor,y:cy-barH/2,width:hqW,height:barH,fill:'#2D3748',rx:4}));
+      xCursor += hqW;
+    }
+    if (d.site){
+      svg.appendChild(el('rect',{x:xCursor,y:cy-barH/2,width:siteW,height:barH,fill:'#4FD1C5',rx:4}));
+    }
+    const total = el('text',{x:padL+plotW+6,y:cy+4,class:'val-label'});
+    total.textContent = `${d.hq}/${d.site}`;
+    svg.appendChild(total);
+  });
+
+  box.innerHTML=''; box.appendChild(svg);
+}
+
+renderStackChart();
+renderLocChart();
+window.addEventListener('resize', ()=>{ renderStackChart(); renderLocChart(); });
+
+// Detail table
+const tbody = document.getElementById('detailBody');
+let totals = {total:0,hq:0,site:0};
+catOrder.forEach(c=>totals[c]=0);
+
+sorted.forEach(d=>{
+  const tr = document.createElement('tr');
+  let cells = `<td class="label-col">${d.group}</td>`;
+  catOrder.forEach(cat=>{
+    const v = d.categories[cat] ? d.categories[cat].total : 0;
+    totals[cat]+=v;
+    cells += `<td>${v ? v : '<span class="dash">–</span>'}</td>`;
+  });
+  cells += `<td class="total-col">${d.total}</td>`;
+  cells += `<td>${d.hq}</td>`;
+  cells += `<td>${d.site}</td>`;
+  tr.innerHTML = cells;
+  tbody.appendChild(tr);
+  totals.total+=d.total; totals.hq+=d.hq; totals.site+=d.site;
+});
+const trTotal = document.createElement('tr');
+trTotal.className='total-row';
+let totalCells = `<td class="label-col">Total — Operations</td>`;
+catOrder.forEach(cat=>{ totalCells += `<td>${totals[cat] ? totals[cat] : '<span class="dash">–</span>'}</td>`; });
+totalCells += `<td>${totals.total}</td><td>${totals.hq}</td><td>${totals.site}</td>`;
+trTotal.innerHTML = totalCells;
+tbody.appendChild(trTotal);
+
+// Group cards
+const cardGrid = document.getElementById('cardGrid');
+sorted.forEach(d=>{
+  const card = document.createElement('div');
+  card.className='group-card';
+  let lines = catOrder.filter(c=>d.categories[c]).map(c=>{
+    const v = d.categories[c];
+    return `<div class="cat-line"><span class="cat-name">${catLabel[c]}</span><span class="loc-split">${v.total} &nbsp;(<b>${v.hq} HQ</b> / <i>${v.site} Site</i>)</span></div>`;
+  }).join('');
+  card.innerHTML = `
+    <div class="gc-head">
+      <div class="gc-title">${d.group}</div>
+      <div class="gc-badge">${d.total} staff</div>
+    </div>
+    ${lines}
+  `;
+  cardGrid.appendChild(card);
+});
+</script>
+</body>
+</html>
