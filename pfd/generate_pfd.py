@@ -294,11 +294,10 @@ def stub(vid, eq, px, y0, vcy, port, label, tag, pos, utility):
     text(px - 35, y0 - 16, 70, 14, label, size=8, color=col)
     tag_right(vid, tag, pos)
 stub("tcv101", "e101", 554.2, 385, 418, (554.2, 448), "HPS 41 bar, 254 °C", "TCV-101", "FC", "HPS")
-stub("tcv102", "r101", 675.5, 330, 366, T("r101"), "BFW (cooling)", "TCV-102", "FO", "BFW")
-stub("tcv103", "e102", 841, 385, 414, T("e102"), "CW", "TCV-103", "FO", "CW")
-stub("tcv104", "e103", 1222.5, 560, 589, T("e103"), "LPS", "TCV-104", "FC", "LPS")
-stub("tcv105", "e104", 1690.5, 395, 425, T("e104"), "CW", "TCV-105", "FO", "CW")
-stub("tcv106", "e105", 1690.5, 680, 710, T("e105"), "LPS", "TCV-106", "FC", "LPS")
+stub("tcv102", "e102", 841, 385, 414, T("e102"), "CW", "TCV-102", "FO", "CW")
+stub("tcv103", "e103", 1222.5, 560, 589, T("e103"), "LPS", "TCV-103", "FC", "LPS")
+stub("tcv104", "e104", 1690.5, 395, 425, T("e104"), "CW", "TCV-104", "FO", "CW")
+stub("tcv105", "e105", 1690.5, 680, 710, T("e105"), "LPS", "TCV-105", "FC", "LPS")
 
 # ------------------------------------------------------------------ T / P stream tags (symbols from the key)
 TW, TH = 50, 14
@@ -339,7 +338,7 @@ def tp_side(x_line, cy, t, p, side=1, off=14, start=0):
 tp_above(103, YC - 11, "25 °C", "1 bar", off=6)
 tp_above(103, YH - 11, "25 °C", "1 bar", off=6)
 tp_above(480.5, YM - 11, "45 °C", "50 bar", off=6)
-tp_above(759.5, YM - 11, "230 °C", "50 bar", off=6)
+tp_above(759.5, YM - 11, "250 °C", "50 bar", off=6)
 tp_side(1116.7, 334, "45 °C", "50 bar", side=1, off=24, start=11)
 tp_side(263.3, 319, "45 °C", "50 bar", side=1, off=24, start=11)
 tp_side(1116.7, 587, "45 °C", "50 bar", side=1, off=24, start=11)
@@ -348,7 +347,7 @@ tp_below(1597.5, 767 + 11, "105 °C", "1.2 bar", off=6)
 # unnumbered key points
 tp_side(233, 425, "40 °C", "50 bar", side=-1)            # K-101 discharge (after last cooler)
 tp_side(233, 512, "40 °C", "50 bar", side=-1)            # K-102 discharge
-tp_above(615, YM, "230 °C", "50 bar", off=10)            # reactor inlet = E-101 outlet
+tp_above(615, YM, "210 °C", "50 bar", off=10)            # reactor inlet = E-101 outlet
 tp_above(915, YM, "45 °C", "50 bar", off=10)             # E-102 outlet
 tp_above(1417, 631, "70 °C", "1.2 bar", off=14)          # column feed
 
@@ -382,8 +381,8 @@ def table(x, y, w, h, title, header, rows, size=9):
 streams = [
  ("1", "CO2 feed", "25", "1", "Vapor", "CO2", "Ambient supply (assumed)"),
  ("2", "H2 feed", "25", "1", "Vapor", "H2", "Ambient supply (assumed; change if your H2 is pressurised)"),
- ("3", "MX-101 outlet", "45", "50", "Vapor", "H2, CO2, CO", "Fresh gas 40 °C + recycle 45 °C; E-101 heats it to 230 °C"),
- ("4", "R-101 effluent", "230", "50", "Vapor", "H2, CO2, CH3OH, H2O, CO", "Isothermal reactor cooled by BFW; loop pressure drop neglected"),
+ ("3", "MX-101 outlet", "45", "50", "Vapor", "H2, CO2, CO", "Fresh gas 40 °C + recycle 45 °C; E-101 heats it to 210 °C"),
+ ("4", "R-101 effluent", "230", "50", "Vapor", "H2, CO2, CH3OH, H2O, CO", "Adiabatic reactor: 210 °C inlet + about 40 K (exothermic); estimate, confirm with a reactor model"),
  ("5", "V-101 overhead", "45", "50", "Vapor", "H2, CO2, CO", "E-102 cools with cooling water (45 °C is above the 40 °C limit)"),
  ("6", "Recycle (K-103 out)", "45", "50", "Vapor", "H2, CO2, CO", "Pressure drop neglected, so same as stream 5"),
  ("7", "V-101 bottoms", "45", "50", "Liquid", "CH3OH, H2O, dissolved gas", "Throttled by LCV-101 to the column pressure"),
@@ -402,12 +401,11 @@ valves = [
  ("FCV-105", "T-101 reflux", "FO", "Keep reflux so overhead temperature cannot rise."),
  ("FCV-106", "Methanol product", "FC", "Keep inventory; reflux takes the whole condensate."),
  ("LCV-102", "T-101 bottoms water", "FC", "Keep sump level; protect P-103."),
- ("TCV-101", "E-101 HPS", "FC", "Loss of control must not overheat the catalyst feed."),
- ("TCV-102", "R-101 BFW cooling", "FO", "Exothermic reactor: maximum cooling on failure (no runaway)."),
- ("TCV-103", "E-102 cooling water", "FO", "Loss of cooling must not send hot gas to V-101."),
- ("TCV-104", "E-103 LPS", "FC", "Stop heating on failure."),
- ("TCV-105", "E-104 cooling water", "FO", "Loss of condensation would over-pressure T-101."),
- ("TCV-106", "E-105 LPS", "FC", "Stop heating on failure."),
+ ("TCV-101", "E-101 HPS", "FC", "Loss of control must not overheat the reactor feed (adiabatic reactor: outlet = inlet + reaction heat)."),
+ ("TCV-102", "E-102 cooling water", "FO", "Loss of cooling must not send hot gas to V-101."),
+ ("TCV-103", "E-103 LPS", "FC", "Stop heating on failure."),
+ ("TCV-104", "E-104 cooling water", "FO", "Loss of condensation would over-pressure T-101."),
+ ("TCV-105", "E-105 LPS", "FC", "Stop heating on failure."),
 ]
 vrows = [(a, b, f'<b><font color="{RED if c == "FC" else GRN}">{c}</font></b>', d) for a, b, c, d in valves]
 table(900, KY, 1080, 290, "CONTROL VALVE SCHEDULE", ["Tag", "Service", "Fail", "Reason"], vrows)
@@ -420,9 +418,7 @@ notes = (
  "(a) Cu/ZnO/Al2O3 tested at 200-230 °C and 50-80 bar (UCM, link 1). (b) Make-up gas heated to 230 °C before an isothermal plug-flow reactor (Nyári et al., link 2). "
  "(c) Patent: 150-300 °C, preferably 200-300 °C (link 3). (d) After the reactor the mixture is cooled to 35 °C at 73.4 bar and flashed at almost reactor pressure, gas recycled (Pérez-Fortes et al. 2014, link 4); "
  "the distillation column runs near ambient pressure (Pérez-Fortes et al. 2016, link 5).<br>"
- "<b>[Chosen from the above]</b> R-101 <b>230 °C, 50 bar</b>: inside the tested window; the lowest pressure of 50-80 bar means thinner walls and less compression (special concern: high pressure, Table 6.2: 4 → 2 mol, higher pressure raises equilibrium conversion). "
- "Exothermic reaction (≈ -49.5 kJ/mol), so lower T favours conversion; the bed is cooled with BFW to stay isothermal. E-101: 45 → 230 °C with HPS at 41 bar (254 °C): approach 24 °C, LMTD ≈ 85 °C, no fired heater. "
- "V-101 <b>45 °C, 50 bar</b>: flash at loop pressure as in (d); literature cools to 35 °C but below 40 °C the lecture requires refrigeration, so 45 °C with cooling water. "
+ "<b>[Chosen from the above]</b> R-101 <b>50 bar</b>, adiabatic (no cooling is drawn in the original PFD): inlet <b>210 °C</b>, outlet about <b>250 °C</b>. The reaction is exothermic (≈ -49.5 kJ/mol), so an uncooled bed heats the gas: calculated +38 K at 10 % CO2 conversion up to +82 K at 21 % (fresh-gas-only feed, ideal-gas heat capacities); recycle gas dilutes this, so +40 K is used. A 210 °C inlet keeps the inlet inside the tested 200-230 °C window and the outlet below the 260 °C limit of the lecture; a higher temperature also lowers the equilibrium conversion. The outlet value is an estimate: confirm it with a reactor model. 50 bar is the lowest pressure of the 50-80 bar window (thinner walls, less compression; Table 6.2: 4 → 2 mol, pressure raises conversion). E-101: 45 → 210 °C with HPS at 41 bar (254 °C): approach 44 °C, LMTD ≈ 106 °C, slightly above the 100 °C limit of Table 6.4, so heat integration is worth considering (the 250 °C reactor effluent could pre-heat the feed). V-101 <b>45 °C, 50 bar</b>: flash at loop pressure as in (d); literature cools to 35 °C but below 40 °C the lecture requires refrigeration, so 45 °C with cooling water. "
  "T-101 <b>1.2 bar</b>: near ambient as in (d) and above 1 bar so no vacuum (lecture).<br>"
  "<b>[Calculated]</b> boiling points at 1.2 bar from CoolProp: methanol 68.8 °C (stream 8), water 104.8 °C (stream 9) - same pressure, different composition. "
  "K-101/K-102 1 → 50 bar: ratio 2.66 per stage over 4 stages; one stage would reach about 445 °C (CO2) / 657 °C (H2). Last-stage discharge about 143 °C (CO2) / 177 °C (H2) (γ = 1.29 / 1.41, isentropic efficiency 0.75).<br>"
