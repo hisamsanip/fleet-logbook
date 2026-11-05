@@ -293,7 +293,7 @@ def stub(vid, eq, px, y0, vcy, port, label, tag, pos, utility):
     edge(vid, vb(vid), eq, port, color=col, arrow=True)
     text(px - 35, y0 - 16, 70, 14, label, size=8, color=col)
     tag_right(vid, tag, pos)
-stub("tcv101", "e101", 554.2, 385, 418, (554.2, 448), "HPS 50 bar, 264 °C", "TCV-101", "FC", "HPS")
+stub("tcv101", "e101", 554.2, 385, 418, (554.2, 448), "HPS 41 bar, 254 °C", "TCV-101", "FC", "HPS")
 stub("tcv102", "r101", 675.5, 330, 366, T("r101"), "BFW (cooling)", "TCV-102", "FO", "BFW")
 stub("tcv103", "e102", 841, 385, 414, T("e102"), "CW", "TCV-103", "FO", "CW")
 stub("tcv104", "e103", 1222.5, 560, 589, T("e103"), "LPS", "TCV-104", "FC", "LPS")
@@ -339,7 +339,7 @@ def tp_side(x_line, cy, t, p, side=1, off=14, start=0):
 tp_above(103, YC - 11, "25 °C", "1 bar", off=6)
 tp_above(103, YH - 11, "25 °C", "1 bar", off=6)
 tp_above(480.5, YM - 11, "45 °C", "50 bar", off=6)
-tp_above(759.5, YM - 11, "250 °C", "50 bar", off=6)
+tp_above(759.5, YM - 11, "230 °C", "50 bar", off=6)
 tp_side(1116.7, 334, "45 °C", "50 bar", side=1, off=24, start=11)
 tp_side(263.3, 319, "45 °C", "50 bar", side=1, off=24, start=11)
 tp_side(1116.7, 587, "45 °C", "50 bar", side=1, off=24, start=11)
@@ -348,7 +348,7 @@ tp_below(1597.5, 767 + 11, "105 °C", "1.2 bar", off=6)
 # unnumbered key points
 tp_side(233, 425, "40 °C", "50 bar", side=-1)            # K-101 discharge (after last cooler)
 tp_side(233, 512, "40 °C", "50 bar", side=-1)            # K-102 discharge
-tp_above(615, YM, "250 °C", "50 bar", off=10)            # reactor inlet = E-101 outlet
+tp_above(615, YM, "230 °C", "50 bar", off=10)            # reactor inlet = E-101 outlet
 tp_above(915, YM, "45 °C", "50 bar", off=10)             # E-102 outlet
 tp_above(1417, 631, "70 °C", "1.2 bar", off=14)          # column feed
 
@@ -369,7 +369,7 @@ valveH("k_v", 430, KY + 52)
 text(450, KY + 22, 420, 90,
      "Small control valve with diaphragm actuator. <b><font color='#C00000'>FC</font></b> = fails closed, <b><font color='#007A33'>FO</font></b> = fails open. "
      "FCV flow, PCV pressure, LCV level, TCV temperature.<br>"
-     "Utility lines: <font color='#A93226'>steam (HPS 50 bar, 264 °C; LPS 5 barg, 160 °C)</font>, <font color='#1F618D'>cooling water 30 → 40 °C</font>, "
+     "Utility lines: <font color='#A93226'>steam (HPS 41 bar, 254 °C; LPS 5 barg, 160 °C)</font>, <font color='#1F618D'>cooling water 30 → 40 °C</font>, "
      "<font color='#117A65'>boiler feed water</font>.<br>Tags without a stream number mark unnumbered lines (design basis, to be confirmed by simulation).",
      size=9, align="left", valign="top")
 
@@ -382,8 +382,8 @@ def table(x, y, w, h, title, header, rows, size=9):
 streams = [
  ("1", "CO2 feed", "25", "1", "Vapor", "CO2", "Ambient supply (assumed)"),
  ("2", "H2 feed", "25", "1", "Vapor", "H2", "Ambient supply (assumed; change if your H2 is pressurised)"),
- ("3", "MX-101 outlet", "45", "50", "Vapor", "H2, CO2, CO", "Fresh gas 40 °C + recycle 45 °C; E-101 heats it to 250 °C"),
- ("4", "R-101 effluent", "250", "50", "Vapor", "H2, CO2, CH3OH, H2O, CO", "Reactor cooled (BFW) to hold 250 °C; loop pressure drop neglected"),
+ ("3", "MX-101 outlet", "45", "50", "Vapor", "H2, CO2, CO", "Fresh gas 40 °C + recycle 45 °C; E-101 heats it to 230 °C"),
+ ("4", "R-101 effluent", "230", "50", "Vapor", "H2, CO2, CH3OH, H2O, CO", "Isothermal reactor cooled by BFW; loop pressure drop neglected"),
  ("5", "V-101 overhead", "45", "50", "Vapor", "H2, CO2, CO", "E-102 cools with cooling water (45 °C is above the 40 °C limit)"),
  ("6", "Recycle (K-103 out)", "45", "50", "Vapor", "H2, CO2, CO", "Pressure drop neglected, so same as stream 5"),
  ("7", "V-101 bottoms", "45", "50", "Liquid", "CH3OH, H2O, dissolved gas", "Throttled by LCV-101 to the column pressure"),
@@ -413,24 +413,27 @@ vrows = [(a, b, f'<b><font color="{RED if c == "FC" else GRN}">{c}</font></b>', 
 table(900, KY, 1080, 290, "CONTROL VALVE SCHEDULE", ["Tag", "Service", "Fail", "Reason"], vrows)
 
 notes = (
- "<b style='font-size:11px;'>DESIGN BASIS (Chapter 5 heuristics + literature)</b><br>"
- "<b>Heuristics:</b> prefer 1 &lt; P &lt; 10 bar and 40 &lt; T &lt; 260 °C; T &gt; 250 °C needs a fired heater / molten salt; T &gt; 400 °C special MoC; T &lt; 40 °C needs refrigeration "
- "(use cooling water 30 → 40 °C); P &gt; 10 bar needs thick walls; compressor Pout/Pin &gt; 3 → multistage with intercoolers; a valve with large ΔP is acceptable for control or when a liquid is throttled (Table 6.4).<br>"
- "<b>Pressure:</b> the whole synthesis loop (streams 3-7, R-101, V-101) is taken at 50 bar; pressure drops in exchangers, reactor, valve and piping are neglected at PFD level (a simulation gives them). "
- "T-101 is at 1.2 bar (just above atmospheric: inside 1-10 bar, no vacuum), tray pressure drop neglected. The only large pressure reduction is at LCV-101 (50 → 1.2 bar), because the liquid must enter the column at column pressure.<br>"
- "<b>R-101 250 °C, 50 bar</b> (special concern: high pressure). CO2 + 3H2 → CH3OH + H2O, 4 → 2 mol, exothermic (≈ -49.5 kJ/mol): pressure raises equilibrium conversion and rate (Table 6.2); "
- "Cu/ZnO/Al2O3 works at about 200-300 °C. The bed is cooled with BFW to stay at 250 °C, so the feed is heated directly to 250 °C.<br>"
- "<b>E-101:</b> 45 → 250 °C with HPS at 50 bar (264 °C, top of the 250-265 °C range in the notes): approach 14 °C, LMTD ≈ 74 °C. 250 °C is the highest temperature HPS can give; above it a fired heater would be needed (about 10 times the cost of an exchanger, slide 8).<br>"
- "<b>K-101, K-102:</b> 1 → 50 bar, ratio 50 &gt; 3, so 4 stages (ratio 2.66 each) with intercoolers back to 40 °C. Without intercooling a single stage would reach about 445 °C (CO2) and 657 °C (H2). "
- "Last-stage discharge without a final cooler: about 143 °C (CO2) and 177 °C (H2) (adiabatic, isentropic efficiency 0.75); the diagram assumes the last stage is also cooled to 40 °C.<br>"
- "<b>E-102 / V-101:</b> cooled to 45 °C with cooling water, no refrigeration. <b>T-101:</b> condenser on cooling water, reboiler on LPS. Reflux is taken before P-102, as in the original PFD. "
- "The liquid from V-101 contains dissolved CO2/H2 that will flash at LCV-101: consider a degassing drum.<br>"
- "<b>References:</b> (1) CPE604 Chapter 5 notes (Turton et al., Analysis, Synthesis and Design of Chemical Processes, 4th ed., Ch. 6; slide 19 compressor example). (2) Van-Dal and Bouallou, J. Cleaner Prod. 57 (2013) 38-45. "
- "(3) Cu/ZnO/Al2O3 experiments at 200-230 °C, 50-80 bar (UCM, PSA reactor for methanol-enhanced production via CO2 hydrogenation). (4) US 9,133,074: 150-300 °C, preferably 200-300 °C. "
- "LPS 5 barg / 160 °C typical (Turton Table 8.3).<br>"
- "<font color='#C00000'><b>Values not taken from the lecture notes are assumptions: confirm with a simulation and equipment sizing.</b></font>"
+ "<b style='font-size:11px;'>WHERE EACH VALUE COMES FROM</b><br>"
+ "<b>[Lecture, Ch.5]</b> preferred 1-10 bar and 40-260 °C; T &lt; 40 °C needs refrigeration, so use cooling water (30 → 40 °C); HPS 40-50 bar at 250-265 °C; T &gt; 250 °C needs a fired heater; "
+ "Pout/Pin &gt; 3 → several stages with intercoolers (slide 19); a valve with large ΔP is acceptable for control or a throttled liquid (Table 6.4).<br>"
+ "<b>[Literature, from search summaries; full papers not readable here]</b> "
+ "(a) Cu/ZnO/Al2O3 tested at 200-230 °C and 50-80 bar (UCM, link 1). (b) Make-up gas heated to 230 °C before an isothermal plug-flow reactor (Nyári et al., link 2). "
+ "(c) Patent: 150-300 °C, preferably 200-300 °C (link 3). (d) After the reactor the mixture is cooled to 35 °C at 73.4 bar and flashed at almost reactor pressure, gas recycled (Pérez-Fortes et al. 2014, link 4); "
+ "the distillation column runs near ambient pressure (Pérez-Fortes et al. 2016, link 5).<br>"
+ "<b>[Chosen from the above]</b> R-101 <b>230 °C, 50 bar</b>: inside the tested window; the lowest pressure of 50-80 bar means thinner walls and less compression (special concern: high pressure, Table 6.2: 4 → 2 mol, higher pressure raises equilibrium conversion). "
+ "Exothermic reaction (≈ -49.5 kJ/mol), so lower T favours conversion; the bed is cooled with BFW to stay isothermal. E-101: 45 → 230 °C with HPS at 41 bar (254 °C): approach 24 °C, LMTD ≈ 85 °C, no fired heater. "
+ "V-101 <b>45 °C, 50 bar</b>: flash at loop pressure as in (d); literature cools to 35 °C but below 40 °C the lecture requires refrigeration, so 45 °C with cooling water. "
+ "T-101 <b>1.2 bar</b>: near ambient as in (d) and above 1 bar so no vacuum (lecture).<br>"
+ "<b>[Calculated]</b> boiling points at 1.2 bar from CoolProp: methanol 68.8 °C (stream 8), water 104.8 °C (stream 9) - same pressure, different composition. "
+ "K-101/K-102 1 → 50 bar: ratio 2.66 per stage over 4 stages; one stage would reach about 445 °C (CO2) / 657 °C (H2). Last-stage discharge about 143 °C (CO2) / 177 °C (H2) (γ = 1.29 / 1.41, isentropic efficiency 0.75).<br>"
+ "<b>[Assumed - not from a source]</b> feeds at 25 °C, 1 bar; last stage cooled to 40 °C; recycle at 45 °C; column feed 70 °C (below its boiling point, the boiling point of the feed was not calculated); "
+ "LPS 5 barg / 160 °C; all pressure drops neglected (so K-103 only covers the loop pressure drop, and P-101 only the losses of E-103 and FCV-104). "
+ "Liquid from V-101 carries dissolved CO2/H2 that flash at LCV-101: literature plants add a second, low-pressure flash.<br>"
+ "<b>Links:</b> (1) docta.ucm.es/entities/publication/f691fa62-7d12-409a-8a55-90cff01bbd32 (2) researchgate.net/publication/341739508 (3) US 9,133,074, image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/9133074 "
+ "(4) researchgate.net/publication/272381030 (5) ideas.repec.org/a/eee/appene/v161y2016icp718-732.html. "
+ "<font color='#C00000'><b>Confirm all values with a simulation before using them for design.</b></font>"
 )
-box(20, KY + 345, 1960, 150, notes, fill="#FFFBE6", size=9)
+box(20, KY + 345, 1960, 185, notes, fill="#FFFBE6", size=9)
 
 # ------------------------------------------------------------------ OUTPUT
 xml = ('<mxfile host="app.diagrams.net" version="24.0.0"><diagram id="pfd1" name="PFD - Methanol from CO2">'
